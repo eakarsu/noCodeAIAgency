@@ -1,0 +1,112 @@
+{
+  "name": "Customer Onboarding Sequence",
+  "description": "Automated onboarding flow that sends welcome emails, sets up accounts, and guides new customers through their first steps.",
+  "type": "WORKFLOW",
+  "category": "Customer Success",
+  "industry": "SaaS",
+  "tags": ["onboarding", "welcome", "email", "customer-success", "automation"],
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 50 },
+      "data": {
+        "label": "New Customer Signed Up",
+        "type": "trigger",
+        "config": { "triggerType": "webhook", "event": "customer.created" }
+      }
+    },
+    {
+      "id": "action-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 200 },
+      "data": {
+        "label": "Send Welcome Email",
+        "type": "action",
+        "config": {
+          "actionType": "send_email",
+          "to": "{{trigger.data.email}}",
+          "subject": "Welcome to our platform!",
+          "body": "Hi {{trigger.data.name}}, welcome aboard! Here's how to get started..."
+        }
+      }
+    },
+    {
+      "id": "action-2",
+      "type": "custom",
+      "position": { "x": 250, "y": 350 },
+      "data": {
+        "label": "Create Workspace",
+        "type": "action",
+        "config": {
+          "actionType": "create_record",
+          "entity": "workspace",
+          "data": { "name": "{{trigger.data.company}} Workspace", "ownerId": "{{trigger.data.id}}" }
+        }
+      }
+    },
+    {
+      "id": "delay-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 500 },
+      "data": {
+        "label": "Wait 24 Hours",
+        "type": "delay",
+        "config": { "value": 24, "unit": "hours" }
+      }
+    },
+    {
+      "id": "action-3",
+      "type": "custom",
+      "position": { "x": 250, "y": 650 },
+      "data": {
+        "label": "Send Tips Email",
+        "type": "action",
+        "config": {
+          "actionType": "send_email",
+          "to": "{{trigger.data.email}}",
+          "subject": "5 Tips to get the most out of your account",
+          "body": "Here are some tips to help you get started..."
+        }
+      }
+    },
+    {
+      "id": "delay-2",
+      "type": "custom",
+      "position": { "x": 250, "y": 800 },
+      "data": {
+        "label": "Wait 3 Days",
+        "type": "delay",
+        "config": { "value": 3, "unit": "days" }
+      }
+    },
+    {
+      "id": "action-4",
+      "type": "custom",
+      "position": { "x": 250, "y": 950 },
+      "data": {
+        "label": "Check-in Email",
+        "type": "action",
+        "config": {
+          "actionType": "send_email",
+          "to": "{{trigger.data.email}}",
+          "subject": "How's everything going?",
+          "body": "Just checking in to see if you need any help..."
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "action-1" },
+    { "id": "e2", "source": "action-1", "target": "action-2" },
+    { "id": "e3", "source": "action-2", "target": "delay-1" },
+    { "id": "e4", "source": "delay-1", "target": "action-3" },
+    { "id": "e5", "source": "action-3", "target": "delay-2" },
+    { "id": "e6", "source": "delay-2", "target": "action-4" }
+  ],
+  "variables": {
+    "welcomeEmailDelay": 0,
+    "tipsEmailDelay": 24,
+    "checkInDelay": 72
+  }
+}

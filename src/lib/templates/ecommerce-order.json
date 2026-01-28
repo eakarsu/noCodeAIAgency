@@ -1,0 +1,121 @@
+{
+  "name": "E-commerce Order Processing",
+  "description": "Automated order processing workflow with inventory check, payment confirmation, and customer notifications.",
+  "type": "WORKFLOW",
+  "category": "E-commerce",
+  "industry": "Retail",
+  "tags": ["ecommerce", "orders", "notifications", "inventory", "fulfillment"],
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 50 },
+      "data": {
+        "label": "New Order Placed",
+        "type": "trigger",
+        "config": { "triggerType": "webhook", "event": "order.created" }
+      }
+    },
+    {
+      "id": "action-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 200 },
+      "data": {
+        "label": "Check Inventory",
+        "type": "action",
+        "config": {
+          "actionType": "http_request",
+          "method": "GET",
+          "url": "{{variables.inventoryApiUrl}}/check?sku={{trigger.data.items[0].sku}}"
+        }
+      }
+    },
+    {
+      "id": "condition-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 350 },
+      "data": {
+        "label": "In Stock?",
+        "type": "condition",
+        "config": {
+          "conditions": [{ "field": "nodes.action-1.output.body.inStock", "operator": "equals", "value": "true" }],
+          "logic": "and",
+          "trueTargets": ["action-2"],
+          "falseTargets": ["action-4"]
+        }
+      }
+    },
+    {
+      "id": "action-2",
+      "type": "custom",
+      "position": { "x": 100, "y": 500 },
+      "data": {
+        "label": "Confirm Order",
+        "type": "action",
+        "config": {
+          "actionType": "update_record",
+          "entity": "order",
+          "id": "{{trigger.data.orderId}}",
+          "data": { "status": "confirmed" }
+        }
+      }
+    },
+    {
+      "id": "action-3",
+      "type": "custom",
+      "position": { "x": 100, "y": 650 },
+      "data": {
+        "label": "Send Confirmation Email",
+        "type": "action",
+        "config": {
+          "actionType": "send_email",
+          "to": "{{trigger.data.customerEmail}}",
+          "subject": "Order Confirmed - #{{trigger.data.orderId}}",
+          "body": "Your order has been confirmed and is being prepared for shipping."
+        }
+      }
+    },
+    {
+      "id": "action-4",
+      "type": "custom",
+      "position": { "x": 400, "y": 500 },
+      "data": {
+        "label": "Notify Backorder",
+        "type": "action",
+        "config": {
+          "actionType": "send_email",
+          "to": "{{trigger.data.customerEmail}}",
+          "subject": "Order Update - #{{trigger.data.orderId}}",
+          "body": "We're sorry, one or more items in your order are currently out of stock. We'll notify you when they're available."
+        }
+      }
+    },
+    {
+      "id": "action-5",
+      "type": "custom",
+      "position": { "x": 400, "y": 650 },
+      "data": {
+        "label": "Alert Inventory Team",
+        "type": "action",
+        "config": {
+          "actionType": "send_email",
+          "to": "inventory@company.com",
+          "subject": "Backorder Alert: {{trigger.data.items[0].sku}}",
+          "body": "Item out of stock for order #{{trigger.data.orderId}}"
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "action-1" },
+    { "id": "e2", "source": "action-1", "target": "condition-1" },
+    { "id": "e3", "source": "condition-1", "target": "action-2", "label": "In Stock" },
+    { "id": "e4", "source": "condition-1", "target": "action-4", "label": "Out of Stock" },
+    { "id": "e5", "source": "action-2", "target": "action-3" },
+    { "id": "e6", "source": "action-4", "target": "action-5" }
+  ],
+  "variables": {
+    "inventoryApiUrl": "https://api.example.com/inventory",
+    "fulfillmentPartner": "default"
+  }
+}

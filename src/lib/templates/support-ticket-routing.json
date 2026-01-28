@@ -1,0 +1,112 @@
+{
+  "name": "Support Ticket AI Routing",
+  "description": "Automatically classify incoming support tickets using AI and route them to the appropriate team based on category and priority.",
+  "type": "WORKFLOW",
+  "category": "Support",
+  "industry": "General",
+  "tags": ["support", "tickets", "ai", "routing", "classification"],
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 50 },
+      "data": {
+        "label": "New Ticket Created",
+        "type": "trigger",
+        "config": { "triggerType": "webhook", "event": "ticket.created" }
+      }
+    },
+    {
+      "id": "ai-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 200 },
+      "data": {
+        "label": "Classify Ticket",
+        "type": "ai",
+        "config": {
+          "provider": "openai",
+          "model": "gpt-3.5-turbo",
+          "action": "classify",
+          "input": "Classify this support ticket into a category (billing, technical, feature_request, bug, general) and priority (low, medium, high, urgent): Subject: {{trigger.data.subject}} Body: {{trigger.data.description}}"
+        }
+      }
+    },
+    {
+      "id": "ai-2",
+      "type": "custom",
+      "position": { "x": 250, "y": 350 },
+      "data": {
+        "label": "Analyze Sentiment",
+        "type": "ai",
+        "config": {
+          "provider": "openai",
+          "model": "gpt-3.5-turbo",
+          "action": "sentiment",
+          "input": "{{trigger.data.description}}"
+        }
+      }
+    },
+    {
+      "id": "condition-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 500 },
+      "data": {
+        "label": "Urgent or Negative?",
+        "type": "condition",
+        "config": {
+          "conditions": [
+            { "field": "nodes.ai-2.output.result.sentiment", "operator": "equals", "value": "negative" }
+          ],
+          "logic": "or",
+          "trueTargets": ["action-1"],
+          "falseTargets": ["action-2"]
+        }
+      }
+    },
+    {
+      "id": "action-1",
+      "type": "custom",
+      "position": { "x": 100, "y": 650 },
+      "data": {
+        "label": "Escalate to Manager",
+        "type": "action",
+        "config": {
+          "actionType": "send_email",
+          "to": "support-manager@company.com",
+          "subject": "ESCALATED: {{trigger.data.subject}}",
+          "body": "Ticket requires immediate attention. Category: {{nodes.ai-1.output.result.category}}, Sentiment: {{nodes.ai-2.output.result.sentiment}}"
+        }
+      }
+    },
+    {
+      "id": "action-2",
+      "type": "custom",
+      "position": { "x": 400, "y": 650 },
+      "data": {
+        "label": "Assign to Team",
+        "type": "action",
+        "config": {
+          "actionType": "update_record",
+          "entity": "ticket",
+          "id": "{{trigger.data.id}}",
+          "data": {
+            "category": "{{nodes.ai-1.output.result.category}}",
+            "priority": "{{nodes.ai-1.output.result.priority}}",
+            "status": "assigned"
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "ai-1" },
+    { "id": "e2", "source": "ai-1", "target": "ai-2" },
+    { "id": "e3", "source": "ai-2", "target": "condition-1" },
+    { "id": "e4", "source": "condition-1", "target": "action-1", "label": "Escalate" },
+    { "id": "e5", "source": "condition-1", "target": "action-2", "label": "Normal" }
+  ],
+  "variables": {
+    "escalationEmail": "support-manager@company.com",
+    "autoAssign": true
+  }
+}

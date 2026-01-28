@@ -1,0 +1,97 @@
+{
+  "name": "AI Content Generation Pipeline",
+  "description": "Multi-step content generation workflow that creates, refines, and formats content using AI models.",
+  "type": "WORKFLOW",
+  "category": "Marketing",
+  "industry": "Content Marketing",
+  "tags": ["content", "ai", "generation", "marketing", "copywriting"],
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 50 },
+      "data": {
+        "label": "Content Request",
+        "type": "trigger",
+        "config": { "triggerType": "manual", "event": "content.request" }
+      }
+    },
+    {
+      "id": "ai-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 200 },
+      "data": {
+        "label": "Generate Draft",
+        "type": "ai",
+        "config": {
+          "provider": "openai",
+          "model": "gpt-4",
+          "action": "generate",
+          "input": "Write a {{trigger.data.contentType}} about {{trigger.data.topic}}. Target audience: {{trigger.data.audience}}. Tone: {{trigger.data.tone}}.",
+          "parameters": { "temperature": 0.8, "maxTokens": 2048 }
+        }
+      }
+    },
+    {
+      "id": "ai-2",
+      "type": "custom",
+      "position": { "x": 250, "y": 400 },
+      "data": {
+        "label": "Extract Key Points",
+        "type": "ai",
+        "config": {
+          "provider": "openai",
+          "model": "gpt-3.5-turbo",
+          "action": "extract",
+          "input": "Extract the main key points and SEO keywords from this content: {{nodes.ai-1.output.result}}"
+        }
+      }
+    },
+    {
+      "id": "ai-3",
+      "type": "custom",
+      "position": { "x": 250, "y": 550 },
+      "data": {
+        "label": "Generate Summary",
+        "type": "ai",
+        "config": {
+          "provider": "openai",
+          "model": "gpt-3.5-turbo",
+          "action": "summarize",
+          "input": "Create a compelling meta description and social media summary for: {{nodes.ai-1.output.result}}"
+        }
+      }
+    },
+    {
+      "id": "action-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 700 },
+      "data": {
+        "label": "Save Content",
+        "type": "action",
+        "config": {
+          "actionType": "create_record",
+          "entity": "content",
+          "data": {
+            "title": "{{trigger.data.topic}}",
+            "body": "{{nodes.ai-1.output.result}}",
+            "keyPoints": "{{nodes.ai-2.output.result}}",
+            "summary": "{{nodes.ai-3.output.result}}",
+            "status": "draft"
+          }
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "ai-1" },
+    { "id": "e2", "source": "ai-1", "target": "ai-2" },
+    { "id": "e3", "source": "ai-2", "target": "ai-3" },
+    { "id": "e4", "source": "ai-3", "target": "action-1" }
+  ],
+  "variables": {
+    "defaultContentType": "blog post",
+    "defaultTone": "professional",
+    "defaultModel": "gpt-4"
+  }
+}

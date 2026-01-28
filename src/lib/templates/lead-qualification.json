@@ -1,0 +1,89 @@
+{
+  "name": "Lead Qualification & Routing",
+  "description": "Automatically score incoming leads based on criteria and route them to the appropriate sales team member.",
+  "type": "WORKFLOW",
+  "category": "Sales",
+  "industry": "B2B SaaS",
+  "tags": ["leads", "sales", "scoring", "routing", "automation"],
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 50 },
+      "data": {
+        "label": "New Lead Received",
+        "type": "trigger",
+        "config": { "triggerType": "webhook", "event": "lead.created" }
+      }
+    },
+    {
+      "id": "ai-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 200 },
+      "data": {
+        "label": "Score Lead",
+        "type": "ai",
+        "config": {
+          "provider": "openai",
+          "model": "gpt-3.5-turbo",
+          "action": "classify",
+          "input": "Score this lead based on company size, industry, and engagement level: {{trigger.data}}"
+        }
+      }
+    },
+    {
+      "id": "condition-1",
+      "type": "custom",
+      "position": { "x": 250, "y": 350 },
+      "data": {
+        "label": "High Value?",
+        "type": "condition",
+        "config": {
+          "conditions": [{ "field": "nodes.ai-1.output.result.score", "operator": "greater_than", "value": "70" }],
+          "logic": "and",
+          "trueTargets": ["action-1"],
+          "falseTargets": ["action-2"]
+        }
+      }
+    },
+    {
+      "id": "action-1",
+      "type": "custom",
+      "position": { "x": 100, "y": 500 },
+      "data": {
+        "label": "Assign to Senior Rep",
+        "type": "action",
+        "config": {
+          "actionType": "send_email",
+          "to": "senior-sales@company.com",
+          "subject": "High-value lead: {{trigger.data.name}}",
+          "body": "A high-value lead has been received. Score: {{nodes.ai-1.output.result.score}}"
+        }
+      }
+    },
+    {
+      "id": "action-2",
+      "type": "custom",
+      "position": { "x": 400, "y": 500 },
+      "data": {
+        "label": "Add to Nurture Sequence",
+        "type": "action",
+        "config": {
+          "actionType": "create_record",
+          "entity": "nurture_sequence",
+          "data": { "leadId": "{{trigger.data.id}}", "sequence": "standard" }
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "ai-1" },
+    { "id": "e2", "source": "ai-1", "target": "condition-1" },
+    { "id": "e3", "source": "condition-1", "target": "action-1", "label": "High Value" },
+    { "id": "e4", "source": "condition-1", "target": "action-2", "label": "Standard" }
+  ],
+  "variables": {
+    "scoreThreshold": 70,
+    "seniorRepEmail": "senior-sales@company.com"
+  }
+}
