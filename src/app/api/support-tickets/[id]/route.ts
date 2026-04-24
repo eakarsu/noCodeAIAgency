@@ -114,6 +114,50 @@ export async function PUT(
   }
 }
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user || !session.user.agencyId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id } = await params
+    const ticket = await prisma.supportTicket.findUnique({
+      where: { id },
+      include: {
+        client: {
+          select: { agencyId: true },
+        },
+      },
+    })
+
+    if (!ticket) {
+      return NextResponse.json({ error: "Ticket not found" }, { status: 404 })
+    }
+
+    if (ticket.client.agencyId !== session.user.agencyId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    // Delete related messages first (foreign key constraint)
+    await prisma.ticketMessage.deleteMany({
+      where: { ticketId: id },
+    })
+
+    await prisma.supportTicket.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error deleting ticket:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
 // Add message to ticket
 export async function POST(
   request: NextRequest,

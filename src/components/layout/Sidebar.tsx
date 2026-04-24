@@ -15,6 +15,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Ticket,
 } from "lucide-react"
 import { useAppStore } from "@/stores/useAppStore"
 import { Button } from "../ui/button"
@@ -54,6 +55,11 @@ const navigation = [
     name: "Clients",
     href: "/dashboard/clients",
     icon: Users,
+  },
+  {
+    name: "Support Tickets",
+    href: "/dashboard/support-tickets",
+    icon: Ticket,
   },
   {
     name: "AI Features",

@@ -27,6 +27,7 @@ import {
   Search,
   MoreVertical,
   Trash2,
+  Edit,
   Settings,
   RefreshCw,
   CheckCircle,
@@ -113,6 +114,10 @@ export default function IntegrationsPage() {
     url: "",
     events: [] as string[],
   })
+  const [selectedIntegration, setSelectedIntegration] = useState<Integration | null>(null)
+  const [isIntegrationDetailOpen, setIsIntegrationDetailOpen] = useState(false)
+  const [selectedWebhook, setSelectedWebhook] = useState<Webhook | null>(null)
+  const [isWebhookDetailOpen, setIsWebhookDetailOpen] = useState(false)
 
   const fetchIntegrations = useCallback(async () => {
     try {
@@ -300,7 +305,7 @@ export default function IntegrationsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {integrations.map((integration) => (
-                <Card key={integration.id}>
+                <Card key={integration.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setSelectedIntegration(integration); setIsIntegrationDetailOpen(true); }}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -313,7 +318,7 @@ export default function IntegrationsPage() {
                         </div>
                       </div>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
@@ -329,7 +334,7 @@ export default function IntegrationsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600"
-                            onClick={() => handleDeleteIntegration(integration.id)}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteIntegration(integration.id); }}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
@@ -380,7 +385,7 @@ export default function IntegrationsPage() {
           ) : (
             <div className="space-y-4">
               {webhooks.map((webhook) => (
-                <Card key={webhook.id}>
+                <Card key={webhook.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setSelectedWebhook(webhook); setIsWebhookDetailOpen(true); }}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="p-2 rounded-lg bg-blue-50">
@@ -405,7 +410,7 @@ export default function IntegrationsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDeleteWebhook(webhook.id)}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteWebhook(webhook.id); }}
                       >
                         <Trash2 className="h-4 w-4 text-gray-500" />
                       </Button>
@@ -551,6 +556,111 @@ export default function IntegrationsPage() {
             </Button>
             <Button onClick={handleCreateWebhook} isLoading={isSubmitting}>
               Create Webhook
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Integration Detail Modal */}
+      <Dialog open={isIntegrationDetailOpen} onOpenChange={(open) => { setIsIntegrationDetailOpen(open); if (!open) setSelectedIntegration(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Integration Details</DialogTitle>
+          </DialogHeader>
+          {selectedIntegration && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-purple-50">
+                  <Puzzle className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedIntegration.name}</h3>
+                  <p className="text-sm text-gray-500">{selectedIntegration.provider}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Provider</span>
+                  <p className="text-gray-600">{selectedIntegration.provider}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Type</span>
+                  <p className="text-gray-600">{selectedIntegration.type}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Status</span>
+                  <div className="mt-1 flex items-center gap-2">
+                    {getStatusIcon(selectedIntegration.status)}
+                    <Badge variant={selectedIntegration.status === "ACTIVE" ? "success" : "secondary"}>
+                      {selectedIntegration.status}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Last Sync</span>
+                  <p className="text-gray-600">{selectedIntegration.lastSyncAt ? formatDateTime(selectedIntegration.lastSyncAt) : "Never"}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Created</span>
+                  <p className="text-gray-600">{new Date(selectedIntegration.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="destructive" onClick={() => { if (selectedIntegration) { handleDeleteIntegration(selectedIntegration.id); setIsIntegrationDetailOpen(false); } }}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Webhook Detail Modal */}
+      <Dialog open={isWebhookDetailOpen} onOpenChange={(open) => { setIsWebhookDetailOpen(open); if (!open) setSelectedWebhook(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Webhook Details</DialogTitle>
+          </DialogHeader>
+          {selectedWebhook && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-blue-50">
+                  <Webhook className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedWebhook.name}</h3>
+                  <Badge variant={selectedWebhook.isActive ? "success" : "secondary"}>
+                    {selectedWebhook.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">URL</span>
+                  <p className="text-gray-600 break-all">{selectedWebhook.url}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Events</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedWebhook.events.map((event) => (
+                      <Badge key={event} variant="secondary" className="text-xs">{event}</Badge>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Created</span>
+                  <p className="text-gray-600">{new Date(selectedWebhook.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="destructive" onClick={() => { if (selectedWebhook) { handleDeleteWebhook(selectedWebhook.id); setIsWebhookDetailOpen(false); } }}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

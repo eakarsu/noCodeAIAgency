@@ -89,6 +89,8 @@ export default function TemplatesPage() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -278,7 +280,7 @@ export default function TemplatesPage() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {templatesToRender.map((template) => (
-          <Card key={template.id} className="hover:shadow-md transition-shadow">
+          <Card key={template.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setSelectedTemplate(template); setIsDetailOpen(true); }}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -291,24 +293,24 @@ export default function TemplatesPage() {
                   </div>
                 </div>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleOpenEdit(template)}>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenEdit(template); }}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleUseTemplate(template)}>
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleUseTemplate(template); }}>
                       <Download className="h-4 w-4 mr-2" />
                       Use Template
                     </DropdownMenuItem>
                     {!template.isBuiltIn && (
                       <DropdownMenuItem
                         className="text-red-600"
-                        onClick={() => handleDeleteTemplate(template.id)}
+                        onClick={(e) => { e.stopPropagation(); handleDeleteTemplate(template.id); }}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
@@ -548,6 +550,75 @@ export default function TemplatesPage() {
             </Button>
             <Button onClick={handleEditTemplate} isLoading={isSubmitting}>
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Modal */}
+      <Dialog open={isDetailOpen} onOpenChange={(open) => { setIsDetailOpen(open); if (!open) setSelectedTemplate(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Template Details</DialogTitle>
+          </DialogHeader>
+          {selectedTemplate && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-blue-50">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedTemplate.name}</h3>
+                  <p className="text-sm text-gray-500">{selectedTemplate.category}</p>
+                </div>
+              </div>
+
+              {selectedTemplate.description && (
+                <p className="text-sm text-gray-700">{selectedTemplate.description}</p>
+              )}
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Type</span>
+                  <div className="mt-1"><Badge className={getTypeColor(selectedTemplate.type)}>{selectedTemplate.type}</Badge></div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Category</span>
+                  <p className="text-gray-600">{selectedTemplate.category}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Built-in</span>
+                  <p className="text-gray-600">{selectedTemplate.isBuiltIn ? "Yes" : "No"}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Public</span>
+                  <p className="text-gray-600">{selectedTemplate.isPublic ? "Yes" : "No"}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Downloads</span>
+                  <p className="text-gray-600">{selectedTemplate.downloads}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Rating</span>
+                  <p className="text-gray-600">{selectedTemplate.rating.toFixed(1)} / 5.0</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Created</span>
+                  <p className="text-gray-600">{new Date(selectedTemplate.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            {selectedTemplate && !selectedTemplate.isBuiltIn && (
+              <Button variant="destructive" onClick={() => { handleDeleteTemplate(selectedTemplate.id); setIsDetailOpen(false); }}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => { if (selectedTemplate) { handleOpenEdit(selectedTemplate); setIsDetailOpen(false); } }}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
             </Button>
           </DialogFooter>
         </DialogContent>

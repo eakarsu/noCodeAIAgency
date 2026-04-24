@@ -345,30 +345,32 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-orange-600" />
-              Support Tickets
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Open</span>
-                <Badge variant="warning">{isLoading ? "..." : stats.tickets.open}</Badge>
+        <Link href="/dashboard/support-tickets">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-orange-600" />
+                Support Tickets
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Open</span>
+                  <Badge variant="warning">{isLoading ? "..." : stats.tickets.open}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">In Progress</span>
+                  <Badge variant="default">{isLoading ? "..." : stats.tickets.inProgress}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Resolved</span>
+                  <Badge variant="success">{isLoading ? "..." : stats.tickets.resolved}</Badge>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">In Progress</span>
-                <Badge variant="default">{isLoading ? "..." : stats.tickets.inProgress}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500">Resolved</span>
-                <Badge variant="success">{isLoading ? "..." : stats.tickets.resolved}</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   )

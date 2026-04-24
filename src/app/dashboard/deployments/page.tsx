@@ -27,6 +27,7 @@ import {
   Search,
   MoreVertical,
   Trash2,
+  Edit,
   RefreshCw,
   ExternalLink,
   Clock,
@@ -85,6 +86,8 @@ export default function DeploymentsPage() {
     environment: "STAGING",
     version: "1.0.0",
   })
+  const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
 
   const fetchDeployments = useCallback(async () => {
     try {
@@ -366,7 +369,7 @@ export default function DeploymentsPage() {
           ) : (
             <div className="space-y-4">
               {filteredDeployments.map((deployment) => (
-                <Card key={deployment.id}>
+                <Card key={deployment.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setSelectedDeployment(deployment); setIsDetailOpen(true); }}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -386,6 +389,7 @@ export default function DeploymentsPage() {
                           {deployment.url && (
                             <a
                               href={deployment.url}
+                              onClick={(e) => e.stopPropagation()}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-sm text-blue-600 hover:underline flex items-center gap-1"
@@ -409,25 +413,25 @@ export default function DeploymentsPage() {
                           )}
                         </div>
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                             <Button variant="ghost" size="icon">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             {deployment.status === "PENDING" && (
-                              <DropdownMenuItem onClick={() => handleDeploy(deployment.id)}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeploy(deployment.id); }}>
                                 <Rocket className="h-4 w-4 mr-2" />
                                 Deploy Now
                               </DropdownMenuItem>
                             )}
                             {deployment.status === "DEPLOYED" && (
                               <>
-                                <DropdownMenuItem onClick={() => handleDeploy(deployment.id)}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeploy(deployment.id); }}>
                                   <RefreshCw className="h-4 w-4 mr-2" />
                                   Redeploy
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleRollback(deployment.id)}>
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRollback(deployment.id); }}>
                                   <RotateCcw className="h-4 w-4 mr-2" />
                                   Rollback
                                 </DropdownMenuItem>
@@ -435,7 +439,7 @@ export default function DeploymentsPage() {
                             )}
                             <DropdownMenuItem
                               className="text-red-600"
-                              onClick={() => handleDeleteDeployment(deployment.id)}
+                              onClick={(e) => { e.stopPropagation(); handleDeleteDeployment(deployment.id); }}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
@@ -534,6 +538,87 @@ export default function DeploymentsPage() {
             <Button onClick={handleCreateDeployment} isLoading={isSubmitting}>
               Create Deployment
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Modal */}
+      <Dialog open={isDetailOpen} onOpenChange={(open) => { setIsDetailOpen(open); if (!open) setSelectedDeployment(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Deployment Details</DialogTitle>
+          </DialogHeader>
+          {selectedDeployment && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-blue-50">
+                  {getStatusIcon(selectedDeployment.status)}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedDeployment.name}</h3>
+                  <p className="text-sm text-gray-500">v{selectedDeployment.version}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Environment</span>
+                  <div className="mt-1">{getEnvBadge(selectedDeployment.environment)}</div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Status</span>
+                  <div className="mt-1">{getStatusBadge(selectedDeployment.status)}</div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Version</span>
+                  <p className="text-gray-600">v{selectedDeployment.version}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Client</span>
+                  <p className="text-gray-600">{selectedDeployment.client?.name || "No client"}</p>
+                </div>
+                {selectedDeployment.url && (
+                  <div className="col-span-2">
+                    <span className="font-medium text-gray-700">URL</span>
+                    <a
+                      href={selectedDeployment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline flex items-center gap-1 mt-1"
+                    >
+                      {selectedDeployment.url}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+                <div>
+                  <span className="font-medium text-gray-700">Deployed At</span>
+                  <p className="text-gray-600">{selectedDeployment.deployedAt ? formatDateTime(selectedDeployment.deployedAt) : "Not deployed"}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Created</span>
+                  <p className="text-gray-600">{new Date(selectedDeployment.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="destructive" onClick={() => { if (selectedDeployment) { handleDeleteDeployment(selectedDeployment.id); setIsDetailOpen(false); } }}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+            {selectedDeployment?.status === "DEPLOYED" && (
+              <Button variant="outline" onClick={() => { if (selectedDeployment) { handleRollback(selectedDeployment.id); setIsDetailOpen(false); } }}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Rollback
+              </Button>
+            )}
+            {(selectedDeployment?.status === "PENDING" || selectedDeployment?.status === "DEPLOYED") && (
+              <Button onClick={() => { if (selectedDeployment) { handleDeploy(selectedDeployment.id); setIsDetailOpen(false); } }}>
+                <Rocket className="h-4 w-4 mr-2" />
+                {selectedDeployment?.status === "DEPLOYED" ? "Redeploy" : "Deploy Now"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

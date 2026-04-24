@@ -34,6 +34,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { WorkflowEditor } from "@/components/workflow/WorkflowEditor"
 import { Node, Edge, MarkerType } from "@xyflow/react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/modal"
+import { formatDateTime } from "@/lib/utils"
 
 interface WorkflowNode {
   id: string
@@ -96,6 +104,9 @@ export default function BuilderPage() {
   // Run state
   const [runningWorkflowId, setRunningWorkflowId] = useState<string | null>(null)
   const [runResult, setRunResult] = useState<{ id: string; success: boolean; message: string } | null>(null)
+
+  const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
 
   const fetchWorkflows = useCallback(async () => {
     try {
@@ -453,7 +464,7 @@ export default function BuilderPage() {
               <Card
                 key={workflow.id}
                 className="hover:shadow-lg transition-all cursor-pointer group"
-                onClick={() => handleOpenEdit(workflow)}
+                onClick={() => { setSelectedWorkflow(workflow); setIsDetailOpen(true); }}
               >
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-4">
@@ -616,6 +627,102 @@ export default function BuilderPage() {
           })}
         </div>
       )}
+
+      {/* Detail Modal */}
+      <Dialog open={isDetailOpen} onOpenChange={(open) => { setIsDetailOpen(open); if (!open) setSelectedWorkflow(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Workflow Details</DialogTitle>
+          </DialogHeader>
+          {selectedWorkflow && (() => {
+            const nodes = parseNodes(selectedWorkflow.nodes)
+            const edges = parseEdges(selectedWorkflow.edges)
+            return (
+              <div className="space-y-4 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
+                    <GitBranch className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{selectedWorkflow.name}</h3>
+                    <p className="text-sm text-gray-500">v{selectedWorkflow.version}</p>
+                  </div>
+                </div>
+
+                {selectedWorkflow.description && (
+                  <p className="text-sm text-gray-700">{selectedWorkflow.description}</p>
+                )}
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Status</span>
+                    <div className="mt-1">
+                      <Badge variant={getStatusColor(selectedWorkflow.status) as "default" | "success" | "warning" | "secondary"}>
+                        {selectedWorkflow.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Version</span>
+                    <p className="text-gray-600">v{selectedWorkflow.version}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Nodes</span>
+                    <p className="text-gray-600">{nodes.length}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Edges</span>
+                    <p className="text-gray-600">{edges.length}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Created</span>
+                    <p className="text-gray-600">{new Date(selectedWorkflow.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Updated</span>
+                    <p className="text-gray-600">{new Date(selectedWorkflow.updatedAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                {/* Mini node preview */}
+                {nodes.length > 0 && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Node Preview</span>
+                    <div className="flex flex-wrap items-center gap-2 mt-2 p-3 bg-gray-50 rounded-lg">
+                      {nodes.slice(0, 6).map((node) => {
+                        const Icon = NODE_ICONS[node.type] || Square
+                        return (
+                          <div
+                            key={node.id}
+                            className={`px-2 py-1 rounded text-xs text-white flex items-center gap-1 ${NODE_COLORS[node.type] || "bg-gray-500"}`}
+                            title={node.data?.label}
+                          >
+                            <Icon className="h-3 w-3" />
+                            {node.data?.label}
+                          </div>
+                        )
+                      })}
+                      {nodes.length > 6 && (
+                        <span className="text-xs text-gray-500">+{nodes.length - 6} more</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+          <DialogFooter>
+            <Button variant="destructive" onClick={() => { if (selectedWorkflow) { handleDeleteWorkflow(selectedWorkflow.id); setIsDetailOpen(false); } }}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+            <Button onClick={() => { if (selectedWorkflow) { handleOpenEdit(selectedWorkflow); setIsDetailOpen(false); } }}>
+              <Edit className="h-4 w-4 mr-2" />
+              Open Editor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

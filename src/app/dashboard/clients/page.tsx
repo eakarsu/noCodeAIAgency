@@ -78,6 +78,8 @@ export default function ClientsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -345,7 +347,7 @@ export default function ClientsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {clients.map((client) => (
-                <Card key={client.id} className="hover:shadow-md transition-shadow">
+                <Card key={client.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setSelectedClient(client); setIsDetailOpen(true); }}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
@@ -361,7 +363,7 @@ export default function ClientsPage() {
                         </div>
                       </div>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
@@ -561,6 +563,74 @@ export default function ClientsPage() {
             </Button>
             <Button onClick={handleUpdateClient} isLoading={isSubmitting}>
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Modal */}
+      <Dialog open={isDetailOpen} onOpenChange={(open) => { setIsDetailOpen(open); if (!open) setSelectedClient(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Client Details</DialogTitle>
+          </DialogHeader>
+          {selectedClient && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={selectedClient.avatar || ""} />
+                  <AvatarFallback className="text-lg">{getInitials(selectedClient.name)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedClient.name}</h3>
+                  {selectedClient.company && <p className="text-sm text-gray-500">{selectedClient.company}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Email</span>
+                  <p className="text-gray-600">{selectedClient.email}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Phone</span>
+                  <p className="text-gray-600">{selectedClient.phone || "N/A"}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Status</span>
+                  <div className="mt-1">{getStatusBadge(selectedClient.status)}</div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Plan</span>
+                  <p className="text-gray-600 capitalize">{selectedClient.billing?.plan || "No plan"}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Monthly Rate</span>
+                  <p className="text-gray-600">{formatCurrency(selectedClient.billing?.monthlyRate || 0)}/mo</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Tickets</span>
+                  <p className="text-gray-600">{selectedClient._count?.supportTickets || 0}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Deployments</span>
+                  <p className="text-gray-600">{selectedClient._count?.deployments || 0}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Created</span>
+                  <p className="text-gray-600">{new Date(selectedClient.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="destructive" onClick={() => { if (selectedClient) { handleDeleteClient(selectedClient.id); setIsDetailOpen(false); } }}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+            <Button variant="outline" onClick={() => { if (selectedClient) { handleEditClick(selectedClient); setIsDetailOpen(false); } }}>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
             </Button>
           </DialogFooter>
         </DialogContent>
