@@ -15,6 +15,12 @@ model User {
   name          String
   avatar        String?
   role          UserRole  @default(AGENCY_OWNER)
+  // Stripe subscription
+  stripeCustomerId     String?  @unique
+  stripeSubscriptionId String?  @unique
+  stripePriceId        String?
+  plan                 String   @default("free")
+  planExpiresAt        DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -561,6 +567,24 @@ model WebhookTriggerLog {
   createdAt   DateTime @default(now())
 }
 
+// ==================== WEBHOOK RETRY QUEUE ====================
+model WebhookRetry {
+  id            String   @id @default(uuid())
+  webhookId     String   // ID of the Webhook record (outbound webhook)
+  event         String
+  payload       Json
+  targetUrl     String
+  attemptCount  Int      @default(0)
+  maxAttempts   Int      @default(5)
+  nextRetryAt   DateTime
+  lastError     String?
+  status        String   @default("pending")  // pending | succeeded | exhausted
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status, nextRetryAt])
+}
+
 // ==================== TEMPLATE RATINGS ====================
 model TemplateRating {
   id          String   @id @default(uuid())
@@ -602,4 +626,145 @@ model ConnectorDefinition {
   isBuiltIn     Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// ==================== AI USAGE LOG ====================
+model AIUsageLog {
+  id           String   @id @default(uuid())
+  agencyId     String?
+  userId       String?
+  feature      String
+  model        String?
+  input        Json?
+  output       Json?
+  error        String?
+  durationMs   Int?
+  tokensIn     Int?
+  tokensOut    Int?
+  costUsd      Float?
+  ai_results   Json?    // raw AI response payload (for cost/latency analytics)
+  createdAt    DateTime @default(now())
+
+  @@index([agencyId])
+  @@index([feature])
+  @@index([createdAt])
+}
+
+// ==================== A/B TESTING ====================
+model WorkflowABTest {
+  id              String   @id @default(uuid())
+  agencyId        String
+  name            String
+  workflowAId     String
+  workflowBId     String
+  trafficSplit    Int      @default(50) // % to A
+  status          String   @default("RUNNING") // RUNNING / PAUSED / COMPLETED
+  metricsConfig   Json     @default("{}") // {primary: "duration"|"cost"|"successRate"}
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  results         WorkflowABResult[]
+
+  @@index([agencyId])
+}
+
+model WorkflowABResult {
+  id              String   @id @default(uuid())
+  testId          String
+  test            WorkflowABTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  variant         String   // "A" or "B"
+  workflowId      String
+  instanceId      String?
+  durationMs      Int?
+  costUsd         Float?
+  succeeded       Boolean
+  createdAt       DateTime @default(now())
+
+  @@index([testId])
+}
+
+// ==================== SUB-WORKFLOWS / SHARED COMPONENTS ====================
+model SharedComponent {
+  id              String   @id @default(uuid())
+  agencyId        String
+  name            String
+  type            String   // PROMPT_BLOCK / SUB_WORKFLOW / CODE_SNIPPET
+  description     String?
+  content         Json
+  versions        Json     @default("[]") // [{version, content, createdAt}]
+  currentVersion  String   @default("1.0.0")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([agencyId])
+  @@index([type])
+}
+
+// ==================== EXECUTION REPLAY ====================
+model ExecutionReplay {
+  id              String   @id @default(uuid())
+  instanceId      String   @unique
+  workflowId      String
+  agencyId        String
+  nodeOutputs     Json     // Full snapshot of nodeOutputs for click-to-replay
+  variables       Json
+  triggerData     Json
+  durationMs      Int
+  totalCostUsd    Float?
+  createdAt       DateTime @default(now())
+
+  @@index([workflowId])
+  @@index([agencyId])
+}
+
+// ==================== MARKETPLACE REVENUE SHARE ====================
+model MarketplacePurchase {
+  id              String   @id @default(uuid())
+  templateId      String
+  buyerAgencyId   String
+  sellerAgencyId  String
+  amountUsd       Float
+  platformFeeUsd  Float
+  sellerNetUsd    Float
+  stripeChargeId  String?
+  stripeConnectAcct String?
+  status          String   @default("COMPLETED") // COMPLETED / REFUNDED / FAILED
+  createdAt       DateTime @default(now())
+
+  @@index([templateId])
+  @@index([buyerAgencyId])
+  @@index([sellerAgencyId])
+}
+
+model SellerStripeConnect {
+  id              String   @id @default(uuid())
+  agencyId        String   @unique
+  stripeAccountId String   @unique
+  status          String   @default("PENDING") // PENDING / ACTIVE / RESTRICTED
+  payoutEnabled   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ==================== WORKFLOW QUEUE (async execution) ====================
+model WorkflowQueueJob {
+  id              String   @id @default(uuid())
+  workflowId      String
+  agencyId        String
+  workspaceId     String
+  triggerData     Json     @default("{}")
+  variables       Json     @default("{}")
+  status          String   @default("PENDING") // PENDING / RUNNING / COMPLETED / FAILED
+  attemptCount    Int      @default(0)
+  maxAttempts     Int      @default(3)
+  scheduledFor    DateTime @default(now())
+  pickedUpAt      DateTime?
+  completedAt     DateTime?
+  instanceId      String?
+  error           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status, scheduledFor])
+  @@index([workflowId])
 }

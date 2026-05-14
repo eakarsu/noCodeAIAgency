@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/db"
 import { z } from "zod"
+import { encryptCredentialsObject } from "@/lib/ai-helpers"
 
 const integrationSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -68,13 +69,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validated = integrationSchema.parse(body)
 
+    // Encrypt credentials at rest with AES-256-GCM (envelope encryption).
+    // CREDENTIALS_KEY env var must be a base64-encoded 32-byte key.
     const integration = await prisma.integration.create({
       data: {
         name: validated.name,
         type: validated.type,
         provider: validated.provider,
         config: validated.config as object,
-        credentials: validated.credentials as object,
+        credentials: encryptCredentialsObject(validated.credentials as Record<string, unknown>) as object,
         agencyId: session.user.agencyId,
       },
     })

@@ -4,6 +4,7 @@ import { OpenAIConnector } from './providers/openai'
 import { AnthropicConnector } from './providers/anthropic'
 import { GoogleConnector } from './providers/google'
 import { OpenRouterConnector } from './providers/openrouter'
+import { decryptCredentialsObject } from '@/lib/ai-helpers'
 
 const connectors: Map<AIProvider, AIProviderConnector> = new Map()
 
@@ -62,7 +63,7 @@ export class AIService {
         }
       }
 
-      const credentials = integration.credentials as Record<string, string>
+      const credentials = decryptCredentialsObject(integration.credentials as Record<string, unknown>) as Record<string, string>
       apiKey = credentials.apiKey
       organization = credentials.organization
 

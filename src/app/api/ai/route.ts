@@ -3,15 +3,16 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/db"
 import { z } from "zod"
+import { aiRateLimiter, parseAIJson } from "@/lib/ai-helpers"
 
 const aiRequestSchema = z.object({
-  type: z.enum(["WORKFLOW", "CODE", "INTEGRATION", "TEMPLATE", "OPTIMIZATION", "DEBUG"]),
+  type: z.enum(["WORKFLOW", "CODE", "INTEGRATION", "TEMPLATE", "OPTIMIZATION", "DEBUG", "AUTOCOMPLETE"]),
   context: z.record(z.string(), z.unknown()),
   prompt: z.string().optional(),
 })
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-3-haiku"
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-3-5-sonnet-20241022"
 
 // System prompts for different AI request types
 const systemPrompts: Record<string, string> = {
@@ -63,6 +64,10 @@ Return a JSON object with:
 - fixes: string[] (recommended fixes)
 - preventionTips: string[] (how to avoid similar issues)
 Be thorough and provide specific, actionable fixes.`,
+
+  AUTOCOMPLETE: `You are an AI canvas copilot. Given the user's existing workflow graph and the node they just added, propose the next 1-3 most likely nodes.
+Return JSON: { "suggestions": [{ "type": "action|condition|delay|ai|loop|wait", "label": "...", "rationale": "1 sentence why" }] }
+Look at existing types and edges; suggest things that complete a typical pipeline (validate → branch → notify).`,
 }
 
 async function callOpenRouter(type: string, context: Record<string, unknown>, prompt?: string) {
@@ -95,7 +100,7 @@ async function callOpenRouter(type: string, context: Record<string, unknown>, pr
   if (!response.ok) {
     const error = await response.text()
     console.error("OpenRouter API error:", error)
-    throw new Error(`OpenRouter API error: ${response.status}`)
+    throw new Error(`OpenRouter API error ${response.status}: ${error.slice(0, 300)}`)
   }
 
   const data = await response.json()
@@ -105,23 +110,15 @@ async function callOpenRouter(type: string, context: Record<string, unknown>, pr
     throw new Error("No response from OpenRouter")
   }
 
-  // Try to parse JSON from the response
-  try {
-    // Extract JSON from the response (it might be wrapped in markdown code blocks)
-    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content]
-    const jsonString = jsonMatch[1].trim()
-    return JSON.parse(jsonString)
-  } catch {
-    // If parsing fails, return the raw content as a structured response
-    return {
-      message: content,
-      raw: true,
-    }
-  }
+  // Use 3-strategy resilient parser
+  const parsed = parseAIJson(content)
+  if (parsed) return parsed
+  return { message: content, raw: true }
 }
 
-// Fallback responses when OpenRouter is unavailable
-const generateFallbackResponse = (type: string, context: Record<string, unknown>) => {
+// Fallback responses when OpenRouter is unavailable (dev only).
+// In production we surface the real error so failures aren't silently masked.
+const generateFallbackResponse = (type: string) => {
   switch (type) {
     case "WORKFLOW":
       return {
@@ -160,57 +157,15 @@ function transformData(data) {
         language: "javascript",
         explanation: "This code implements a basic data processing pipeline with error handling.",
       }
-    case "INTEGRATION":
+    case "AUTOCOMPLETE":
       return {
-        provider: "recommended-service",
-        config: {
-          apiEndpoint: "https://api.example.com",
-          authType: "oauth2",
-          scopes: ["read", "write"],
-        },
-        steps: [
-          "Configure OAuth credentials",
-          "Set up webhook endpoints",
-          "Map data fields",
-          "Test connection",
+        suggestions: [
+          { type: "action", label: "Send notification", rationale: "Tell users what just happened" },
+          { type: "condition", label: "Check result", rationale: "Branch on the previous step's outcome" },
         ],
-      }
-    case "TEMPLATE":
-      return {
-        name: "AI-Generated Template",
-        type: "WORKFLOW",
-        category: "automation",
-        description: "Automated workflow template based on your industry",
-        content: {
-          features: ["Data sync", "Notifications", "Reporting"],
-        },
-      }
-    case "OPTIMIZATION":
-      return {
-        recommendations: [
-          { area: "Performance", issue: "Slow API calls", fix: "Add caching layer", impact: "high" },
-          { area: "Cost", issue: "High API usage", fix: "Batch requests", impact: "medium" },
-          { area: "Reliability", issue: "No error handling", fix: "Add retry logic", impact: "high" },
-        ],
-        priority: "high",
-        estimatedImpact: "30% performance improvement",
-        implementationSteps: ["Add Redis cache", "Implement request batching", "Add exponential backoff"],
-      }
-    case "DEBUG":
-      return {
-        issue: "Identified potential issues",
-        errors: [
-          { type: "Logic Error", location: "step 3", description: "Missing null check", severity: "warning" },
-          { type: "Configuration", location: "integration", description: "Invalid API key format", severity: "critical" },
-        ],
-        fixes: [
-          "Add input validation at step 3",
-          "Update API key to match required format",
-        ],
-        preventionTips: ["Always validate inputs", "Use environment variables for secrets"],
       }
     default:
-      return { message: "No suggestion available" }
+      return { message: "Fallback unavailable; configure OPENROUTER_API_KEY for live AI." }
   }
 }
 
@@ -221,6 +176,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    const userId = (session.user as { id?: string }).id || session.user.email || "anonymous"
+    const limit = aiRateLimiter(userId)
+    if (!limit.allowed) {
+      return NextResponse.json(
+        {
+          error: `AI rate limit exceeded. Resets at ${limit.resetAt.toISOString()}.`,
+          limit: limit.limit,
+          remaining: 0,
+          resetAt: limit.resetAt.toISOString(),
+        },
+        { status: 429 },
+      )
+    }
+
     const body = await request.json()
     const validated = aiRequestSchema.parse(body)
 
@@ -228,23 +197,27 @@ export async function POST(request: NextRequest) {
     let confidence = 0.85
 
     try {
-      // Try to get response from OpenRouter
       suggestion = await callOpenRouter(validated.type, validated.context, validated.prompt)
-      confidence = 0.9 // Higher confidence for AI-generated responses
+      confidence = 0.9
     } catch (error) {
-      console.error("OpenRouter error, using fallback:", error)
-      // Fall back to predefined responses
-      suggestion = generateFallbackResponse(validated.type, validated.context)
-      confidence = 0.7 // Lower confidence for fallback responses
+      if (process.env.NODE_ENV === "production") {
+        // Surface the real error in production so failures aren't masked.
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : "AI request failed" },
+          { status: 502 },
+        )
+      }
+      console.error("OpenRouter error, using fallback (dev mode):", error)
+      suggestion = generateFallbackResponse(validated.type)
+      confidence = 0.7
     }
 
-    // Store the suggestion in the database
     const savedSuggestion = await prisma.aISuggestion.create({
       data: {
-        type: validated.type,
+        type: validated.type === "AUTOCOMPLETE" ? "OPTIMIZATION" : validated.type,
         context: validated.context as object,
-        suggestion: suggestion,
-        confidence: confidence,
+        suggestion: suggestion as object,
+        confidence,
       },
     })
 
@@ -253,13 +226,19 @@ export async function POST(request: NextRequest) {
       suggestion,
       confidence,
       model: OPENROUTER_MODEL,
+      _meta: {
+        rateLimit: { limit: limit.limit, remaining: limit.remaining, resetAt: limit.resetAt.toISOString() },
+      },
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 })
     }
     console.error("Error processing AI request:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 },
+    )
   }
 }
 

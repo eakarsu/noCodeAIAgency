@@ -13,6 +13,7 @@ import { CodeExecutor } from './code-executor'
 import { TransformExecutor } from './transform-executor'
 import { UtilityExecutor, EndExecutor } from './utility-executor'
 import { WaitExecutor } from './wait-executor'
+import { SubWorkflowExecutor } from './sub-workflow-executor'
 
 const executorRegistry = new Map<string, NodeExecutor>()
 
@@ -33,6 +34,7 @@ export function initializeExecutors(): void {
     new UtilityExecutor(),
     new EndExecutor(),
     new WaitExecutor(),
+    new SubWorkflowExecutor(),
   ]
 
   for (const executor of executors) {
@@ -68,4 +70,5 @@ export {
   UtilityExecutor,
   EndExecutor,
   WaitExecutor,
+  SubWorkflowExecutor,
 }

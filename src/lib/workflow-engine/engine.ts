@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client'
 import { ExecutionContext, EngineOptions, NodeExecutionResult, WorkflowGraph } from './types'
 import { buildWorkflowGraph, findTriggerNode, getOutgoingNodeIds } from './graph'
 import { getExecutor } from './executors'
+import { sendWorkflowSuccessEmail, sendWorkflowFailureEmail } from '@/lib/email'
 
 const DEFAULT_MAX_NODE_EXECUTIONS = 1000
 
@@ -207,6 +208,48 @@ export class WorkflowEngine {
           : undefined,
       },
     })
+
+    // Send email notification on terminal states (non-blocking)
+    if (status === 'completed' || status === 'failed') {
+      this.sendExecutionNotification(status, error).catch(() => {})
+    }
+  }
+
+  private async sendExecutionNotification(status: string, error?: string): Promise<void> {
+    try {
+      // Load workflow + agency owner email
+      const workflow = await prisma.workflow.findUnique({
+        where: { id: this.context.workflowId },
+        include: {
+          agency: {
+            include: { owner: { select: { email: true } } },
+          },
+        },
+      })
+
+      if (!workflow?.agency?.owner?.email) return
+
+      const ownerEmail = workflow.agency.owner.email
+      const durationMs = Date.now() - this.context.startedAt.getTime()
+
+      if (status === 'completed') {
+        await sendWorkflowSuccessEmail(
+          ownerEmail,
+          workflow.name,
+          this.context.instanceId,
+          durationMs
+        )
+      } else if (status === 'failed') {
+        await sendWorkflowFailureEmail(
+          ownerEmail,
+          workflow.name,
+          this.context.instanceId,
+          error ?? 'Unknown error'
+        )
+      }
+    } catch {
+      // Email errors should never affect workflow execution
+    }
   }
 
   static stopInstance(instanceId: string): boolean {
