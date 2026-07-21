@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import prisma from '@/lib/db'
 import Stripe from 'stripe'
 
-// Disable body parsing — Stripe needs raw bytes for signature verification
-export const config = { api: { bodyParser: false } }
-
 export async function POST(request: NextRequest) {
+  const stripe = getStripe()
   const signature = request.headers.get('stripe-signature')
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
@@ -27,7 +25,7 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
-        await handleCheckoutCompleted(session)
+        await handleCheckoutCompleted(session, stripe)
         break
       }
 
@@ -55,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session, stripe: Stripe) {
   const userId = session.metadata?.userId
   const planId = session.metadata?.planId
 

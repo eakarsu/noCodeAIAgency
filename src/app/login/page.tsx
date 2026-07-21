@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -31,7 +30,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError("Invalid email or password")
       } else {
-        router.push("/dashboard")
+        router.push("/governed")
       }
     } catch {
       setError("An error occurred. Please try again.")
@@ -51,7 +50,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
           <CardDescription>
-            Sign in to your No-Code AI Agency account
+            Sign in to the governed recommendation workspace
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -85,21 +84,8 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm font-medium text-blue-800 mb-2">Demo Credentials</p>
-            <p className="text-sm text-blue-700">
-              Email: <code className="bg-blue-100 px-1 rounded">demo@example.com</code>
-            </p>
-            <p className="text-sm text-blue-700">
-              Password: <code className="bg-blue-100 px-1 rounded">password123</code>
-            </p>
-          </div>
-
-          <div className="mt-6 text-center text-sm">
-            <span className="text-gray-500">Don&apos;t have an account? </span>
-            <Link href="/register" className="text-blue-600 hover:underline font-medium">
-              Sign up
-            </Link>
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            Accounts are provisioned by an authorized tenant owner. There are no demo credentials or public registration on the supported production surface.
           </div>
         </CardContent>
       </Card>

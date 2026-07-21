@@ -9,22 +9,24 @@ function bumpVersion(v: string) {
   return parts.join(".")
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.agencyId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const c = await prisma.sharedComponent.findFirst({
-    where: { id: params.id, agencyId: session.user.agencyId },
+    where: { id, agencyId: session.user.agencyId },
   })
   if (!c) return NextResponse.json({ error: "Not found" }, { status: 404 })
   return NextResponse.json(c)
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.agencyId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const body = await req.json()
   const existing = await prisma.sharedComponent.findFirst({
-    where: { id: params.id, agencyId: session.user.agencyId },
+    where: { id, agencyId: session.user.agencyId },
   })
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
@@ -36,13 +38,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     versions.push({ version: newVersion, content: body.content, createdAt: new Date().toISOString() })
     updateData = { ...updateData, content: body.content, currentVersion: newVersion, versions }
   }
-  const updated = await prisma.sharedComponent.update({ where: { id: params.id }, data: updateData })
+  const updated = await prisma.sharedComponent.update({ where: { id }, data: updateData })
   return NextResponse.json(updated)
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.agencyId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  await prisma.sharedComponent.delete({ where: { id: params.id } })
+  await prisma.sharedComponent.delete({ where: { id } })
   return NextResponse.json({ ok: true })
 }

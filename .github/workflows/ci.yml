@@ -1,0 +1,69 @@
+name: Governed AI checks
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: governed_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres-test-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d governed_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres-test-only@127.0.0.1:5432/governed_ci?schema=public
+      NEXTAUTH_URL: https://governed-ci.example.test
+      NEXTAUTH_SECRET: ci-only-random-value-with-at-least-thirty-two-characters
+      RUN_DB_TESTS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run db:migrate
+      - run: npm run db:status
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run eval:offline
+      - run: npm run build
+      - run: npm audit --audit-level=low
+      - run: node scripts/scan-secrets.mjs
+      - name: Prove schema has no drift
+        run: npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+      - name: Prove unsafe database commands fail closed
+        shell: bash
+        run: |
+          set +e
+          node scripts/blocked-command.mjs db:reset
+          result=$?
+          set -e
+          test "$result" -eq 78
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --target web -t governed-ai-web:test .
+      - run: docker build --target worker -t governed-ai-worker:test .
+      - run: docker image inspect governed-ai-web:test governed-ai-worker:test >/dev/null

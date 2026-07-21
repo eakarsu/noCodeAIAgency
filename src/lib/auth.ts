@@ -30,6 +30,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid email or password")
         }
 
+        if (user.disabledAt) {
+          throw new Error("Invalid email or password")
+        }
+
         const isValid = await bcrypt.compare(credentials.password, user.password)
 
         if (!isValid) {
@@ -44,6 +48,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           agencyId: agencyId || null,
+          sessionVersion: user.sessionVersion,
           image: user.avatar,
         }
       },
@@ -55,6 +60,20 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.role = user.role
         token.agencyId = user.agencyId
+        token.sessionVersion = user.sessionVersion
+        token.authInvalid = false
+      } else if (token.id) {
+        const current = await prisma.user.findUnique({
+          where: { id: token.id },
+          include: { agency: true, agencyMember: true },
+        })
+        if (!current || current.disabledAt || current.sessionVersion !== token.sessionVersion) {
+          token.authInvalid = true
+        } else {
+          token.authInvalid = false
+          token.role = current.role
+          token.agencyId = current.agency?.id || current.agencyMember?.agencyId || null
+        }
       }
       return token
     },
@@ -63,6 +82,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.role = token.role as string
         session.user.agencyId = token.agencyId as string | null
+        session.user.authInvalid = Boolean(token.authInvalid)
       }
       return session
     },
@@ -73,7 +93,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 8 * 60 * 60,
   },
   secret: process.env.NEXTAUTH_SECRET,
 }

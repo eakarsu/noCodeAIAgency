@@ -4,17 +4,32 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "db:push": "prisma db push",
+    "build": "next build && node scripts/prepare-standalone.mjs",
+    "prestart": "node scripts/validate-production-env.mjs",
+    "start": "node .next/standalone/server.js",
+    "lint": "eslint --max-warnings=0 src/app/governed src/app/api/governed src/lib/governed-ai src/lib/auth.ts src/lib/db.ts src/proxy.ts scripts tests prisma/seed.ts",
+    "lint:legacy": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:unit": "tsx --test tests/governed-ai.unit.test.ts",
+    "test:integration": "tsx --test tests/governed-ai.integration.test.ts",
+    "eval:offline": "tsx scripts/run-offline-evaluations.ts",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run eval:offline && npm run build && npm audit --audit-level=low",
+    "db:migrate": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
+    "db:push": "node scripts/blocked-command.mjs db:push",
     "db:generate": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio",
-    "db:reset": "prisma db push --force-reset && npm run db:seed"
+    "demo-data:load": "tsx prisma/seed.ts",
+    "db:studio": "node scripts/blocked-command.mjs db:studio",
+    "db:reset": "node scripts/blocked-command.mjs db:reset",
+    "owner:bootstrap": "tsx scripts/bootstrap-owner.ts",
+    "create-admin": "tsx scripts/bootstrap-owner.ts",
+    "user:revoke": "tsx scripts/revoke-user.ts",
+    "preworker:recommendations": "node scripts/validate-production-env.mjs",
+    "worker:recommendations": "tsx scripts/run-governed-worker.ts"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "npm run demo-data:load"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
@@ -36,15 +51,15 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.90.11",
     "@xyflow/react": "^12.9.3",
-    "axios": "^1.13.2",
+    "axios": "1.18.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.555.0",
-    "next": "16.0.5",
-    "next-auth": "^4.24.13",
+    "next": "16.2.10",
+    "next-auth": "4.24.14",
     "prisma": "^5.22.0",
     "react": "19.2.0",
     "react-dnd": "^16.0.1",
@@ -52,10 +67,9 @@
     "react-dom": "19.2.0",
     "react-hook-form": "^7.67.0",
     "recharts": "^3.5.1",
-    "resend": "^6.12.2",
+    "resend": "6.17.2",
     "stripe": "^22.1.0",
     "tailwind-merge": "^3.4.0",
-    "uuid": "^13.0.0",
     "zod": "^4.1.13",
     "zustand": "^5.0.8"
   },
@@ -66,12 +80,19 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/uuid": "^10.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.0.5",
+    "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.10"
+    },
+    "next-auth": {
+      "uuid": "11.1.1"
+    }
   }
 }

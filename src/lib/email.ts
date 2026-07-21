@@ -1,7 +1,5 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const FROM_ADDRESS = process.env.EMAIL_FROM ?? 'no-reply@example.com'
 const APP_NAME = process.env.APP_NAME ?? 'NoCode AI Agency'
 
@@ -14,6 +12,9 @@ export interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ id: string } | null> {
   try {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) throw new Error('Email provider is not configured')
+    const resend = new Resend(apiKey)
     const { data, error } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: Array.isArray(options.to) ? options.to : [options.to],

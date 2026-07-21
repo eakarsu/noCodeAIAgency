@@ -1,8 +1,10 @@
 import Stripe from 'stripe'
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
-  apiVersion: '2026-04-22.dahlia',
-})
+export function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) throw new Error('Stripe is not configured')
+  return new Stripe(key, { apiVersion: '2026-04-22.dahlia' })
+}
 
 export type PlanId = 'free' | 'pro' | 'agency'
 

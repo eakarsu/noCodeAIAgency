@@ -1,37 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Governed AI recommendation service
 
-## Getting Started
+This repository contains a broad generated no-code/AI prototype. Its only supported production journey is now deliberately narrow:
 
-First, run the development server:
+1. a tenant-bound connector submits an HMAC-signed incremental source batch;
+2. documents are versioned with source timestamps, permission roles, deletion tombstones, and replay-safe receipts;
+3. an authenticated contributor queues an idempotent recommendation job;
+4. a separately run worker retrieves only fresh, permission-eligible evidence and calls one fixed AI provider contract;
+5. schema, citation, confidence, cost, and latency gates must pass; and
+6. an independent reviewer or owner approves or rejects the result. Approval records a decision and **never executes a workflow**.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+All other generated pages and API routes return HTTP 410 in production through `src/proxy.ts`. They remain source evidence only and are not supported product behavior.
+
+## Local verification
+
+Use a disposable PostgreSQL database; never point tests or seed commands at shared data.
+
+```sh
+npm ci
+DATABASE_URL=postgresql://user@127.0.0.1:5432/disposable_test npm run db:migrate
+RUN_DB_TESTS=1 DATABASE_URL=postgresql://user@127.0.0.1:5432/disposable_test npm test
+npm run typecheck
+npm run lint
+npm run build
+npm audit --audit-level=low
+node scripts/scan-secrets.mjs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`db:push`, `db:reset`, and `db:studio` fail closed. The local seed requires an explicit discardable-data acknowledgement, a loopback PostgreSQL host, an empty user table, and caller-provided credentials. No demo credential exists.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production topology
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Apply migrations as an explicit release step, then run the web and worker processes separately:
 
-## Learn More
+```sh
+npm run db:migrate
+NODE_ENV=production npm run start
+NODE_ENV=production npm run worker:recommendations
+```
 
-To learn more about Next.js, take a look at the following resources:
+Both production processes run strict environment validation. Use `.env.example` only as a key-name reference; its placeholders intentionally fail validation. Health endpoints are `/api/governed/health/live` and `/api/governed/health/ready`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+See:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `docs/OPERATIONS.md` for deploy, worker, libpq-compatible backup/restore URLs, incident, and rollback procedures;
+- `docs/EXTERNAL_PROCESSING.md` for provider, privacy, prompt-injection, and approval boundaries;
+- `docs/MIGRATION_ADOPTION.md` before adopting migrations on any database previously managed with `prisma db push`;
+- `SECURITY.md` for the credential and vulnerability policy.
 
-## Deploy on Vercel
+## Launch blockers
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# noCodeAIAgency
+The former tracked launcher contained a provider credential. It has been removed from the current tree, but the provider/account owner must revoke it, audit access, and authorize coordinated history remediation before launch or redistribution. Production also requires vendor/data-processing approval, tenant source-key provisioning, supported model evaluation, target-platform CI/container evidence, retention policy, monitoring, and a completed migration-adoption rehearsal for any existing database.

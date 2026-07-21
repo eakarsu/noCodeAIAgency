@@ -1,0 +1,95 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
+
+  migrate:
+    build:
+      context: .
+      target: worker
+    command: ["npm", "run", "db:migrate"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    build:
+      context: .
+      target: web
+    environment: &governed-environment
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?NEXTAUTH_URL is required}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?OPENROUTER_API_KEY is required}
+      GOVERNED_OPENROUTER_MODEL: ${GOVERNED_OPENROUTER_MODEL:?GOVERNED_OPENROUTER_MODEL is required}
+      GOVERNED_EXTERNAL_AI_ACK: ${GOVERNED_EXTERNAL_AI_ACK:?GOVERNED_EXTERNAL_AI_ACK is required}
+      GOVERNED_SOURCE_KEYS_JSON: ${GOVERNED_SOURCE_KEYS_JSON:?GOVERNED_SOURCE_KEYS_JSON is required}
+      GOVERNED_JOBS_PER_MINUTE: ${GOVERNED_JOBS_PER_MINUTE:-10}
+      GOVERNED_MAX_ATTEMPTS: ${GOVERNED_MAX_ATTEMPTS:-3}
+      GOVERNED_LEASE_MS: ${GOVERNED_LEASE_MS:-30000}
+      GOVERNED_SOURCE_MAX_AGE_SECONDS: ${GOVERNED_SOURCE_MAX_AGE_SECONDS:-86400}
+      GOVERNED_MAX_LATENCY_MS: ${GOVERNED_MAX_LATENCY_MS:-10000}
+      GOVERNED_MAX_INPUT_CHARS: ${GOVERNED_MAX_INPUT_CHARS:-30000}
+      GOVERNED_MAX_COST_MICROS: ${GOVERNED_MAX_COST_MICROS:-100000}
+      GOVERNED_INPUT_COST_MICROS_PER_MILLION: ${GOVERNED_INPUT_COST_MICROS_PER_MILLION:?GOVERNED_INPUT_COST_MICROS_PER_MILLION is required}
+      GOVERNED_OUTPUT_COST_MICROS_PER_MILLION: ${GOVERNED_OUTPUT_COST_MICROS_PER_MILLION:?GOVERNED_OUTPUT_COST_MICROS_PER_MILLION is required}
+      GOVERNED_MIN_CONFIDENCE: ${GOVERNED_MIN_CONFIDENCE:-0.65}
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/governed/health/ready').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  worker:
+    build:
+      context: .
+      target: worker
+    environment:
+      <<: *governed-environment
+      GOVERNED_WORKER_ID: ${GOVERNED_WORKER_ID:-compose-worker-1}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres-data:

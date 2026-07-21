@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, PLANS, getPlanById, type PlanId } from '@/lib/stripe'
+import { getStripe, getPlanById, type PlanId } from '@/lib/stripe'
 import prisma from '@/lib/db'
 
 export async function POST(request: NextRequest) {
@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    const stripe = getStripe()
     const { planId } = body as { planId: PlanId }
 
     const plan = getPlanById(planId)

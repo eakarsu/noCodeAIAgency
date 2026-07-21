@@ -14,15 +14,16 @@ import prisma from "@/lib/db"
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { instanceId: string } },
+  { params }: { params: Promise<{ instanceId: string }> },
 ) {
+  const { instanceId } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.agencyId) {
     return new Response("Unauthorized", { status: 401 })
   }
 
   const instance = await prisma.workflowInstance.findUnique({
-    where: { id: params.instanceId },
+    where: { id: instanceId },
     include: { workflow: { include: { agency: true } } },
   })
   if (!instance || instance.workflow.agencyId !== session.user.agencyId) {

@@ -7,12 +7,14 @@ declare module "next-auth" {
       id: string
       role: string
       agencyId: string | null
+      authInvalid: boolean
     } & DefaultSession["user"]
   }
 
   interface User extends DefaultUser {
     role: string
     agencyId: string | null
+    sessionVersion: number
   }
 }
 
@@ -21,5 +23,7 @@ declare module "next-auth/jwt" {
     id: string
     role: string
     agencyId: string | null
+    sessionVersion: number
+    authInvalid: boolean
   }
 }

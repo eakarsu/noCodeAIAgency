@@ -9,25 +9,27 @@ datasource db {
 
 // ==================== USER & AUTH ====================
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String
-  name          String
-  avatar        String?
-  role          UserRole  @default(AGENCY_OWNER)
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  password             String
+  name                 String
+  avatar               String?
+  role                 UserRole  @default(AGENCY_OWNER)
   // Stripe subscription
-  stripeCustomerId     String?  @unique
-  stripeSubscriptionId String?  @unique
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
   stripePriceId        String?
-  plan                 String   @default("free")
+  plan                 String    @default("free")
   planExpiresAt        DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  sessionVersion       Int       @default(1)
+  disabledAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  agency        Agency?   @relation("AgencyOwner")
-  agencyMember  AgencyMember?
+  agency         Agency?         @relation("AgencyOwner")
+  agencyMember   AgencyMember?
   supportTickets SupportTicket[]
-  activities    ActivityLog[]
+  activities     ActivityLog[]
 }
 
 enum UserRole {
@@ -39,28 +41,33 @@ enum UserRole {
 
 // ==================== AGENCY ====================
 model Agency {
-  id              String   @id @default(uuid())
-  name            String
-  slug            String   @unique
-  ownerId         String   @unique
-  owner           User     @relation("AgencyOwner", fields: [ownerId], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  ownerId   String   @unique
+  owner     User     @relation("AgencyOwner", fields: [ownerId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // White Label Settings
-  brandSettings   BrandSettings?
-  customDomains   CustomDomain[]
+  brandSettings BrandSettings?
+  customDomains CustomDomain[]
 
   // Resources
-  members         AgencyMember[]
-  clients         Client[]
-  templates       Template[]
-  workflows       Workflow[]
-  integrations    Integration[]
-  deployments     Deployment[]
-  apiKeys         ApiKey[]
-  webhooks        Webhook[]
-  webhookTriggers WebhookTrigger[]
+  members                    AgencyMember[]
+  clients                    Client[]
+  templates                  Template[]
+  workflows                  Workflow[]
+  integrations               Integration[]
+  deployments                Deployment[]
+  apiKeys                    ApiKey[]
+  webhooks                   Webhook[]
+  webhookTriggers            WebhookTrigger[]
+  governedSourceDocuments    GovernedSourceDocument[]
+  governedSyncReceipts       GovernedSyncReceipt[]
+  governedRecommendationJobs GovernedRecommendationJob[]
+  governedAuditEvents        GovernedAuditEvent[]
+  governedRateWindows        GovernedRateWindow[]
 }
 
 model AgencyMember {
@@ -75,58 +82,58 @@ model AgencyMember {
 
 // ==================== WHITE LABEL ====================
 model BrandSettings {
-  id              String  @id @default(uuid())
-  agencyId        String  @unique
-  agency          Agency  @relation(fields: [agencyId], references: [id])
+  id       String @id @default(uuid())
+  agencyId String @unique
+  agency   Agency @relation(fields: [agencyId], references: [id])
 
-  primaryColor    String  @default("#3B82F6")
-  secondaryColor  String  @default("#10B981")
-  accentColor     String  @default("#8B5CF6")
-  logo            String?
-  favicon         String?
-  companyName     String?
-  supportEmail    String?
-  customCss       String?
+  primaryColor   String  @default("#3B82F6")
+  secondaryColor String  @default("#10B981")
+  accentColor    String  @default("#8B5CF6")
+  logo           String?
+  favicon        String?
+  companyName    String?
+  supportEmail   String?
+  customCss      String?
 
   // Email Branding
   emailHeaderLogo String?
   emailFooterText String?
   emailSignature  String?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CustomDomain {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id])
-  domain      String   @unique
-  verified    Boolean  @default(false)
-  sslEnabled  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  agencyId   String
+  agency     Agency   @relation(fields: [agencyId], references: [id])
+  domain     String   @unique
+  verified   Boolean  @default(false)
+  sslEnabled Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // ==================== CLIENT MANAGEMENT ====================
 model Client {
-  id            String   @id @default(uuid())
-  agencyId      String
-  agency        Agency   @relation(fields: [agencyId], references: [id])
-  name          String
-  email         String
-  company       String?
-  phone         String?
-  avatar        String?
-  status        ClientStatus @default(ACTIVE)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        String       @id @default(uuid())
+  agencyId  String
+  agency    Agency       @relation(fields: [agencyId], references: [id])
+  name      String
+  email     String
+  company   String?
+  phone     String?
+  avatar    String?
+  status    ClientStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-  workspace     ClientWorkspace?
-  billing       ClientBilling?
-  usageRecords  UsageRecord[]
+  workspace      ClientWorkspace?
+  billing        ClientBilling?
+  usageRecords   UsageRecord[]
   supportTickets SupportTicket[]
-  deployments   Deployment[]
+  deployments    Deployment[]
 }
 
 enum ClientStatus {
@@ -136,43 +143,43 @@ enum ClientStatus {
 }
 
 model ClientWorkspace {
-  id          String   @id @default(uuid())
-  clientId    String   @unique
-  client      Client   @relation(fields: [clientId], references: [id])
-  name        String
-  settings    Json     @default("{}")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  clientId  String   @unique
+  client    Client   @relation(fields: [clientId], references: [id])
+  name      String
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  workflows   WorkflowInstance[]
+  workflows WorkflowInstance[]
 }
 
 model ClientBilling {
-  id                String   @id @default(uuid())
-  clientId          String   @unique
-  client            Client   @relation(fields: [clientId], references: [id])
-  plan              String   @default("starter")
-  monthlyRate       Float    @default(0)
-  billingCycle      String   @default("monthly")
-  nextBillingDate   DateTime?
-  paymentMethod     String?
-  stripeCustomerId  String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String    @id @default(uuid())
+  clientId         String    @unique
+  client           Client    @relation(fields: [clientId], references: [id])
+  plan             String    @default("starter")
+  monthlyRate      Float     @default(0)
+  billingCycle     String    @default("monthly")
+  nextBillingDate  DateTime?
+  paymentMethod    String?
+  stripeCustomerId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  invoices          Invoice[]
+  invoices Invoice[]
 }
 
 model Invoice {
-  id              String   @id @default(uuid())
-  billingId       String
-  billing         ClientBilling @relation(fields: [billingId], references: [id])
-  amount          Float
-  status          InvoiceStatus @default(PENDING)
-  dueDate         DateTime
-  paidAt          DateTime?
-  invoiceNumber   String   @unique
-  createdAt       DateTime @default(now())
+  id            String        @id @default(uuid())
+  billingId     String
+  billing       ClientBilling @relation(fields: [billingId], references: [id])
+  amount        Float
+  status        InvoiceStatus @default(PENDING)
+  dueDate       DateTime
+  paidAt        DateTime?
+  invoiceNumber String        @unique
+  createdAt     DateTime      @default(now())
 }
 
 enum InvoiceStatus {
@@ -183,28 +190,28 @@ enum InvoiceStatus {
 }
 
 model UsageRecord {
-  id          String   @id @default(uuid())
-  clientId    String
-  client      Client   @relation(fields: [clientId], references: [id])
-  metric      String
-  value       Float
-  date        DateTime @default(now())
+  id       String   @id @default(uuid())
+  clientId String
+  client   Client   @relation(fields: [clientId], references: [id])
+  metric   String
+  value    Float
+  date     DateTime @default(now())
 }
 
 model SupportTicket {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   clientId    String
-  client      Client   @relation(fields: [clientId], references: [id])
+  client      Client         @relation(fields: [clientId], references: [id])
   userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
+  user        User?          @relation(fields: [userId], references: [id])
   subject     String
   description String
-  status      TicketStatus @default(OPEN)
+  status      TicketStatus   @default(OPEN)
   priority    TicketPriority @default(MEDIUM)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
-  messages    TicketMessage[]
+  messages TicketMessage[]
 }
 
 enum TicketStatus {
@@ -222,37 +229,37 @@ enum TicketPriority {
 }
 
 model TicketMessage {
-  id          String   @id @default(uuid())
-  ticketId    String
-  ticket      SupportTicket @relation(fields: [ticketId], references: [id])
-  content     String
-  senderType  String
-  senderId    String
-  createdAt   DateTime @default(now())
+  id         String        @id @default(uuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id])
+  content    String
+  senderType String
+  senderId   String
+  createdAt  DateTime      @default(now())
 }
 
 // ==================== TEMPLATES ====================
 model Template {
-  id            String   @id @default(uuid())
-  agencyId      String?
-  agency        Agency?  @relation(fields: [agencyId], references: [id])
-  name          String
-  description   String?
-  type          TemplateType
-  category      String
-  industry      String?
-  thumbnail     String?
-  content       Json
-  isPublic      Boolean  @default(false)
-  isBuiltIn     Boolean  @default(false)
-  version       String   @default("1.0.0")
-  downloads     Int      @default(0)
-  rating        Float    @default(0)
-  tags          String[] @default([])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String       @id @default(uuid())
+  agencyId    String?
+  agency      Agency?      @relation(fields: [agencyId], references: [id])
+  name        String
+  description String?
+  type        TemplateType
+  category    String
+  industry    String?
+  thumbnail   String?
+  content     Json
+  isPublic    Boolean      @default(false)
+  isBuiltIn   Boolean      @default(false)
+  version     String       @default("1.0.0")
+  downloads   Int          @default(0)
+  rating      Float        @default(0)
+  tags        String[]     @default([])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  ratings       TemplateRating[]
+  ratings TemplateRating[]
 }
 
 enum TemplateType {
@@ -267,19 +274,19 @@ enum TemplateType {
 
 // ==================== VISUAL BUILDER ====================
 model Workflow {
-  id            String   @id @default(uuid())
-  agencyId      String
-  agency        Agency   @relation(fields: [agencyId], references: [id])
-  name          String
-  description   String?
-  nodes         Json     @default("[]")
-  edges         Json     @default("[]")
-  variables     Json     @default("{}")
-  settings      Json     @default("{}")
-  status        WorkflowStatus @default(DRAFT)
-  version       String   @default("1.0.0")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String         @id @default(uuid())
+  agencyId    String
+  agency      Agency         @relation(fields: [agencyId], references: [id])
+  name        String
+  description String?
+  nodes       Json           @default("[]")
+  edges       Json           @default("[]")
+  variables   Json           @default("{}")
+  settings    Json           @default("{}")
+  status      WorkflowStatus @default(DRAFT)
+  version     String         @default("1.0.0")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   instances       WorkflowInstance[]
   versions        WorkflowVersion[]
@@ -294,48 +301,48 @@ enum WorkflowStatus {
 }
 
 model WorkflowInstance {
-  id             String   @id @default(uuid())
-  workflowId     String
-  workflow       Workflow @relation(fields: [workflowId], references: [id])
-  workspaceId    String
-  workspace      ClientWorkspace @relation(fields: [workspaceId], references: [id])
-  status         String   @default("running")
-  currentNode    String?
-  data           Json     @default("{}")
-  executionMode  String   @default("async")
-  error          String?
-  logs           Json     @default("[]")
-  startedAt      DateTime @default(now())
-  completedAt    DateTime?
+  id            String          @id @default(uuid())
+  workflowId    String
+  workflow      Workflow        @relation(fields: [workflowId], references: [id])
+  workspaceId   String
+  workspace     ClientWorkspace @relation(fields: [workspaceId], references: [id])
+  status        String          @default("running")
+  currentNode   String?
+  data          Json            @default("{}")
+  executionMode String          @default("async")
+  error         String?
+  logs          Json            @default("[]")
+  startedAt     DateTime        @default(now())
+  completedAt   DateTime?
 
-  executions     WorkflowExecution[]
+  executions WorkflowExecution[]
 }
 
 model WorkflowExecution {
-  id          String   @id @default(uuid())
+  id          String           @id @default(uuid())
   instanceId  String
   instance    WorkflowInstance @relation(fields: [instanceId], references: [id])
   nodeId      String
   nodeType    String
-  status      String   @default("pending")
-  input       Json     @default("{}")
-  output      Json     @default("{}")
+  status      String           @default("pending")
+  input       Json             @default("{}")
+  output      Json             @default("{}")
   error       String?
   duration    Int?
-  startedAt   DateTime @default(now())
+  startedAt   DateTime         @default(now())
   completedAt DateTime?
 }
 
 model WorkflowVersion {
-  id          String   @id @default(uuid())
-  workflowId  String
-  workflow    Workflow @relation(fields: [workflowId], references: [id])
-  version     String
-  nodes       Json
-  edges       Json
-  variables   Json
-  changelog   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id])
+  version    String
+  nodes      Json
+  edges      Json
+  variables  Json
+  changelog  String?
+  createdAt  DateTime @default(now())
 }
 
 model FormDefinition {
@@ -351,11 +358,11 @@ model FormDefinition {
 }
 
 model FormSubmission {
-  id          String   @id @default(uuid())
+  id          String         @id @default(uuid())
   formId      String
   form        FormDefinition @relation(fields: [formId], references: [id])
   data        Json
-  submittedAt DateTime @default(now())
+  submittedAt DateTime       @default(now())
 }
 
 model Dashboard {
@@ -371,33 +378,33 @@ model Dashboard {
 }
 
 model Report {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   name        String
   description String?
   type        String
-  config      Json     @default("{}")
+  config      Json      @default("{}")
   schedule    String?
   lastRunAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 // ==================== INTEGRATIONS ====================
 model Integration {
-  id              String   @id @default(uuid())
-  agencyId        String
-  agency          Agency   @relation(fields: [agencyId], references: [id])
-  name            String
-  type            IntegrationType
-  provider        String
-  config          Json     @default("{}")
-  credentials     Json     @default("{}")
-  status          IntegrationStatus @default(INACTIVE)
-  lastSyncAt      DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id          String            @id @default(uuid())
+  agencyId    String
+  agency      Agency            @relation(fields: [agencyId], references: [id])
+  name        String
+  type        IntegrationType
+  provider    String
+  config      Json              @default("{}")
+  credentials Json              @default("{}")
+  status      IntegrationStatus @default(INACTIVE)
+  lastSyncAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
-  dataMappings    DataMapping[]
+  dataMappings DataMapping[]
 }
 
 enum IntegrationType {
@@ -416,71 +423,71 @@ enum IntegrationStatus {
 }
 
 model DataMapping {
-  id              String   @id @default(uuid())
-  integrationId   String
-  integration     Integration @relation(fields: [integrationId], references: [id])
-  name            String
-  sourceField     String
-  targetField     String
-  transformation  String?
-  createdAt       DateTime @default(now())
+  id             String      @id @default(uuid())
+  integrationId  String
+  integration    Integration @relation(fields: [integrationId], references: [id])
+  name           String
+  sourceField    String
+  targetField    String
+  transformation String?
+  createdAt      DateTime    @default(now())
 }
 
 model ApiKey {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id])
-  name        String
-  key         String   @unique
-  scopes      String[] @default([])
-  expiresAt   DateTime?
-  lastUsedAt  DateTime?
-  createdAt   DateTime @default(now())
+  id         String    @id @default(uuid())
+  agencyId   String
+  agency     Agency    @relation(fields: [agencyId], references: [id])
+  name       String
+  key        String    @unique
+  scopes     String[]  @default([])
+  expiresAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
 }
 
 model Webhook {
-  id          String   @id @default(uuid())
-  agencyId    String
-  agency      Agency   @relation(fields: [agencyId], references: [id])
-  name        String
-  url         String
-  events      String[]
-  secret      String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  agencyId  String
+  agency    Agency   @relation(fields: [agencyId], references: [id])
+  name      String
+  url       String
+  events    String[]
+  secret    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  logs        WebhookLog[]
+  logs WebhookLog[]
 }
 
 model WebhookLog {
-  id          String   @id @default(uuid())
-  webhookId   String
-  webhook     Webhook  @relation(fields: [webhookId], references: [id])
-  event       String
-  payload     Json
-  response    Json?
-  statusCode  Int?
-  success     Boolean
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  webhookId  String
+  webhook    Webhook  @relation(fields: [webhookId], references: [id])
+  event      String
+  payload    Json
+  response   Json?
+  statusCode Int?
+  success    Boolean
+  createdAt  DateTime @default(now())
 }
 
 // ==================== DEPLOYMENT ====================
 model Deployment {
-  id            String   @id @default(uuid())
-  agencyId      String
-  agency        Agency   @relation(fields: [agencyId], references: [id])
-  clientId      String?
-  client        Client?  @relation(fields: [clientId], references: [id])
-  name          String
-  environment   DeploymentEnv @default(STAGING)
-  status        DeploymentStatus @default(PENDING)
-  version       String
-  config        Json     @default("{}")
-  url           String?
-  deployedAt    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String           @id @default(uuid())
+  agencyId    String
+  agency      Agency           @relation(fields: [agencyId], references: [id])
+  clientId    String?
+  client      Client?          @relation(fields: [clientId], references: [id])
+  name        String
+  environment DeploymentEnv    @default(STAGING)
+  status      DeploymentStatus @default(PENDING)
+  version     String
+  config      Json             @default("{}")
+  url         String?
+  deployedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 enum DeploymentEnv {
@@ -499,13 +506,13 @@ enum DeploymentStatus {
 
 // ==================== AI FEATURES ====================
 model AISuggestion {
-  id          String   @id @default(uuid())
-  type        AISuggestionType
-  context     Json
-  suggestion  Json
-  confidence  Float
-  status      String   @default("pending")
-  createdAt   DateTime @default(now())
+  id         String           @id @default(uuid())
+  type       AISuggestionType
+  context    Json
+  suggestion Json
+  confidence Float
+  status     String           @default("pending")
+  createdAt  DateTime         @default(now())
 }
 
 enum AISuggestionType {
@@ -518,132 +525,132 @@ enum AISuggestionType {
 }
 
 model AIGeneratedCode {
-  id          String   @id @default(uuid())
-  prompt      String
-  code        String
-  language    String
-  metadata    Json     @default("{}")
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  prompt    String
+  code      String
+  language  String
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
 }
 
 model AIDocumentation {
-  id          String   @id @default(uuid())
-  entityType  String
-  entityId    String
-  content     String
-  format      String   @default("markdown")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  entityType String
+  entityId   String
+  content    String
+  format     String   @default("markdown")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 // ==================== WEBHOOK TRIGGERS ====================
 model WebhookTrigger {
-  id                String   @id @default(uuid())
-  workflowId        String
-  workflow          Workflow @relation(fields: [workflowId], references: [id])
-  agencyId          String
-  agency            Agency   @relation(fields: [agencyId], references: [id])
-  name              String
-  secret            String
-  isActive          Boolean  @default(true)
-  rateLimitPerMinute Int     @default(60)
-  lastTriggeredAt   DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                 String    @id @default(uuid())
+  workflowId         String
+  workflow           Workflow  @relation(fields: [workflowId], references: [id])
+  agencyId           String
+  agency             Agency    @relation(fields: [agencyId], references: [id])
+  name               String
+  secret             String
+  isActive           Boolean   @default(true)
+  rateLimitPerMinute Int       @default(60)
+  lastTriggeredAt    DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  logs              WebhookTriggerLog[]
+  logs WebhookTriggerLog[]
 }
 
 model WebhookTriggerLog {
-  id          String   @id @default(uuid())
-  triggerId   String
-  trigger     WebhookTrigger @relation(fields: [triggerId], references: [id])
-  method      String
-  headers     Json     @default("{}")
-  body        Json     @default("{}")
-  statusCode  Int
-  instanceId  String?
-  duration    Int?
-  createdAt   DateTime @default(now())
+  id         String         @id @default(uuid())
+  triggerId  String
+  trigger    WebhookTrigger @relation(fields: [triggerId], references: [id])
+  method     String
+  headers    Json           @default("{}")
+  body       Json           @default("{}")
+  statusCode Int
+  instanceId String?
+  duration   Int?
+  createdAt  DateTime       @default(now())
 }
 
 // ==================== WEBHOOK RETRY QUEUE ====================
 model WebhookRetry {
-  id            String   @id @default(uuid())
-  webhookId     String   // ID of the Webhook record (outbound webhook)
-  event         String
-  payload       Json
-  targetUrl     String
-  attemptCount  Int      @default(0)
-  maxAttempts   Int      @default(5)
-  nextRetryAt   DateTime
-  lastError     String?
-  status        String   @default("pending")  // pending | succeeded | exhausted
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(uuid())
+  webhookId    String // ID of the Webhook record (outbound webhook)
+  event        String
+  payload      Json
+  targetUrl    String
+  attemptCount Int      @default(0)
+  maxAttempts  Int      @default(5)
+  nextRetryAt  DateTime
+  lastError    String?
+  status       String   @default("pending") // pending | succeeded | exhausted
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([status, nextRetryAt])
 }
 
 // ==================== TEMPLATE RATINGS ====================
 model TemplateRating {
-  id          String   @id @default(uuid())
-  templateId  String
-  template    Template @relation(fields: [templateId], references: [id])
-  userId      String
-  rating      Int
-  review      String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  templateId String
+  template   Template @relation(fields: [templateId], references: [id])
+  userId     String
+  rating     Int
+  review     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([userId, templateId])
 }
 
 // ==================== ACTIVITY & LOGS ====================
 model ActivityLog {
-  id          String   @id @default(uuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
-  action      String
-  entityType  String
-  entityId    String?
-  metadata    Json     @default("{}")
-  ipAddress   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json     @default("{}")
+  ipAddress  String?
+  createdAt  DateTime @default(now())
 }
 
 // ==================== CONNECTOR DEFINITIONS ====================
 model ConnectorDefinition {
-  id            String   @id @default(uuid())
-  name          String
-  provider      String   @unique
-  category      String
-  icon          String?
-  description   String?
-  authType      String
-  configSchema  Json
-  endpoints     Json     @default("[]")
-  isBuiltIn     Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(uuid())
+  name         String
+  provider     String   @unique
+  category     String
+  icon         String?
+  description  String?
+  authType     String
+  configSchema Json
+  endpoints    Json     @default("[]")
+  isBuiltIn    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 // ==================== AI USAGE LOG ====================
 model AIUsageLog {
-  id           String   @id @default(uuid())
-  agencyId     String?
-  userId       String?
-  feature      String
-  model        String?
-  input        Json?
-  output       Json?
-  error        String?
-  durationMs   Int?
-  tokensIn     Int?
-  tokensOut    Int?
-  costUsd      Float?
-  ai_results   Json?    // raw AI response payload (for cost/latency analytics)
-  createdAt    DateTime @default(now())
+  id         String   @id @default(uuid())
+  agencyId   String?
+  userId     String?
+  feature    String
+  model      String?
+  input      Json?
+  output     Json?
+  error      String?
+  durationMs Int?
+  tokensIn   Int?
+  tokensOut  Int?
+  costUsd    Float?
+  ai_results Json? // raw AI response payload (for cost/latency analytics)
+  createdAt  DateTime @default(now())
 
   @@index([agencyId])
   @@index([feature])
@@ -652,49 +659,49 @@ model AIUsageLog {
 
 // ==================== A/B TESTING ====================
 model WorkflowABTest {
-  id              String   @id @default(uuid())
-  agencyId        String
-  name            String
-  workflowAId     String
-  workflowBId     String
-  trafficSplit    Int      @default(50) // % to A
-  status          String   @default("RUNNING") // RUNNING / PAUSED / COMPLETED
-  metricsConfig   Json     @default("{}") // {primary: "duration"|"cost"|"successRate"}
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(uuid())
+  agencyId      String
+  name          String
+  workflowAId   String
+  workflowBId   String
+  trafficSplit  Int      @default(50) // % to A
+  status        String   @default("RUNNING") // RUNNING / PAUSED / COMPLETED
+  metricsConfig Json     @default("{}") // {primary: "duration"|"cost"|"successRate"}
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  results         WorkflowABResult[]
+  results WorkflowABResult[]
 
   @@index([agencyId])
 }
 
 model WorkflowABResult {
-  id              String   @id @default(uuid())
-  testId          String
-  test            WorkflowABTest @relation(fields: [testId], references: [id], onDelete: Cascade)
-  variant         String   // "A" or "B"
-  workflowId      String
-  instanceId      String?
-  durationMs      Int?
-  costUsd         Float?
-  succeeded       Boolean
-  createdAt       DateTime @default(now())
+  id         String         @id @default(uuid())
+  testId     String
+  test       WorkflowABTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  variant    String // "A" or "B"
+  workflowId String
+  instanceId String?
+  durationMs Int?
+  costUsd    Float?
+  succeeded  Boolean
+  createdAt  DateTime       @default(now())
 
   @@index([testId])
 }
 
 // ==================== SUB-WORKFLOWS / SHARED COMPONENTS ====================
 model SharedComponent {
-  id              String   @id @default(uuid())
-  agencyId        String
-  name            String
-  type            String   // PROMPT_BLOCK / SUB_WORKFLOW / CODE_SNIPPET
-  description     String?
-  content         Json
-  versions        Json     @default("[]") // [{version, content, createdAt}]
-  currentVersion  String   @default("1.0.0")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(uuid())
+  agencyId       String
+  name           String
+  type           String // PROMPT_BLOCK / SUB_WORKFLOW / CODE_SNIPPET
+  description    String?
+  content        Json
+  versions       Json     @default("[]") // [{version, content, createdAt}]
+  currentVersion String   @default("1.0.0")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([agencyId])
   @@index([type])
@@ -702,16 +709,16 @@ model SharedComponent {
 
 // ==================== EXECUTION REPLAY ====================
 model ExecutionReplay {
-  id              String   @id @default(uuid())
-  instanceId      String   @unique
-  workflowId      String
-  agencyId        String
-  nodeOutputs     Json     // Full snapshot of nodeOutputs for click-to-replay
-  variables       Json
-  triggerData     Json
-  durationMs      Int
-  totalCostUsd    Float?
-  createdAt       DateTime @default(now())
+  id           String   @id @default(uuid())
+  instanceId   String   @unique
+  workflowId   String
+  agencyId     String
+  nodeOutputs  Json // Full snapshot of nodeOutputs for click-to-replay
+  variables    Json
+  triggerData  Json
+  durationMs   Int
+  totalCostUsd Float?
+  createdAt    DateTime @default(now())
 
   @@index([workflowId])
   @@index([agencyId])
@@ -719,17 +726,17 @@ model ExecutionReplay {
 
 // ==================== MARKETPLACE REVENUE SHARE ====================
 model MarketplacePurchase {
-  id              String   @id @default(uuid())
-  templateId      String
-  buyerAgencyId   String
-  sellerAgencyId  String
-  amountUsd       Float
-  platformFeeUsd  Float
-  sellerNetUsd    Float
-  stripeChargeId  String?
+  id                String   @id @default(uuid())
+  templateId        String
+  buyerAgencyId     String
+  sellerAgencyId    String
+  amountUsd         Float
+  platformFeeUsd    Float
+  sellerNetUsd      Float
+  stripeChargeId    String?
   stripeConnectAcct String?
-  status          String   @default("COMPLETED") // COMPLETED / REFUNDED / FAILED
-  createdAt       DateTime @default(now())
+  status            String   @default("COMPLETED") // COMPLETED / REFUNDED / FAILED
+  createdAt         DateTime @default(now())
 
   @@index([templateId])
   @@index([buyerAgencyId])
@@ -748,23 +755,145 @@ model SellerStripeConnect {
 
 // ==================== WORKFLOW QUEUE (async execution) ====================
 model WorkflowQueueJob {
-  id              String   @id @default(uuid())
-  workflowId      String
-  agencyId        String
-  workspaceId     String
-  triggerData     Json     @default("{}")
-  variables       Json     @default("{}")
-  status          String   @default("PENDING") // PENDING / RUNNING / COMPLETED / FAILED
-  attemptCount    Int      @default(0)
-  maxAttempts     Int      @default(3)
-  scheduledFor    DateTime @default(now())
-  pickedUpAt      DateTime?
-  completedAt     DateTime?
-  instanceId      String?
-  error           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String    @id @default(uuid())
+  workflowId   String
+  agencyId     String
+  workspaceId  String
+  triggerData  Json      @default("{}")
+  variables    Json      @default("{}")
+  status       String    @default("PENDING") // PENDING / RUNNING / COMPLETED / FAILED
+  attemptCount Int       @default(0)
+  maxAttempts  Int       @default(3)
+  scheduledFor DateTime  @default(now())
+  pickedUpAt   DateTime?
+  completedAt  DateTime?
+  instanceId   String?
+  error        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([status, scheduledFor])
   @@index([workflowId])
+}
+
+// ==================== GOVERNED AI RECOMMENDATION ====================
+// This is the only production-supported AI journey. Legacy generated routes
+// remain blocked by src/proxy.ts when NODE_ENV=production.
+enum GovernedRole {
+  OWNER
+  REVIEWER
+  CONTRIBUTOR
+  VIEWER
+}
+
+enum GovernedJobStatus {
+  PENDING
+  RUNNING
+  AWAITING_APPROVAL
+  APPROVED
+  REJECTED
+  FAILED
+}
+
+model GovernedSourceDocument {
+  id              String         @id @default(uuid())
+  agencyId        String
+  agency          Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  externalId      String
+  title           String
+  content         String
+  contentHash     String
+  allowedRoles    GovernedRole[] @default([])
+  sourceUpdatedAt DateTime
+  syncedAt        DateTime       @default(now())
+  deletedAt       DateTime?
+  version         Int            @default(1)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([agencyId, externalId])
+  @@index([agencyId, deletedAt, sourceUpdatedAt])
+}
+
+model GovernedSyncReceipt {
+  id              String   @id @default(uuid())
+  agencyId        String
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  providerEventId String
+  keyId           String
+  requestHash     String
+  sourceTimestamp DateTime
+  outcome         Json
+  createdAt       DateTime @default(now())
+
+  @@unique([agencyId, providerEventId])
+  @@index([agencyId, createdAt])
+}
+
+model GovernedRecommendationJob {
+  id                   String            @id @default(uuid())
+  agencyId             String
+  agency               Agency            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  createdByUserId      String
+  decidedByUserId      String?
+  roleAtCreation       GovernedRole
+  idempotencyKey       String
+  inputHash            String
+  query                String
+  status               GovernedJobStatus @default(PENDING)
+  attemptCount         Int               @default(0)
+  maxAttempts          Int               @default(3)
+  scheduledFor         DateTime          @default(now())
+  leaseOwner           String?
+  leaseExpiresAt       DateTime?
+  retrievedDocumentIds String[]          @default([])
+  evidence             Json              @default("[]")
+  output               Json?
+  quality              Json?
+  provider             String?
+  model                String?
+  promptVersion        String?
+  tokensIn             Int?
+  tokensOut            Int?
+  costMicros           Int?
+  latencyMs            Int?
+  errorCode            String?
+  errorMessage         String?
+  decisionNote         String?
+  decidedAt            DateTime?
+  completedAt          DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@unique([agencyId, idempotencyKey])
+  @@index([agencyId, status, createdAt])
+  @@index([status, scheduledFor, leaseExpiresAt])
+}
+
+model GovernedAuditEvent {
+  id           String   @id @default(uuid())
+  agencyId     String
+  agency       Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  sequence     Int
+  actorUserId  String?
+  action       String
+  entityType   String
+  entityId     String?
+  payload      Json
+  previousHash String
+  hash         String
+  createdAt    DateTime @default(now())
+
+  @@unique([agencyId, sequence])
+  @@index([agencyId, createdAt])
+}
+
+model GovernedRateWindow {
+  agencyId    String
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId      String
+  windowStart DateTime
+  count       Int      @default(1)
+
+  @@id([agencyId, userId, windowStart])
 }

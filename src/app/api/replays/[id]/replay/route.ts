@@ -8,12 +8,13 @@ import { WorkflowEngine } from "@/lib/workflow-engine/engine"
  * POST /api/replays/[id]/replay
  * Re-runs a workflow with the same triggerData (optionally mutated).
  */
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.agencyId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const replay = await prisma.executionReplay.findFirst({
-    where: { id: params.id, agencyId: session.user.agencyId },
+    where: { id, agencyId: session.user.agencyId },
   })
   if (!replay) return NextResponse.json({ error: "Replay not found" }, { status: 404 })
 

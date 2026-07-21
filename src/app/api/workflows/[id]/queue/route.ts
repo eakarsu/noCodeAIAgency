@@ -11,12 +11,13 @@ import prisma from "@/lib/db"
  * This is the production-safe alternative to /execute, which runs
  * synchronously inside the HTTP request and times out on Vercel.
  */
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.agencyId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const wf = await prisma.workflow.findFirst({
-    where: { id: params.id, agencyId: session.user.agencyId },
+    where: { id, agencyId: session.user.agencyId },
   })
   if (!wf) return NextResponse.json({ error: "Workflow not found" }, { status: 404 })
 
@@ -43,13 +44,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
  * GET /api/workflows/[id]/queue?page=&pageSize=
  * Paginated queued/running history for this workflow.
  */
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session?.user?.agencyId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const page = parseInt(searchParams.get("page") || "1")
   const pageSize = parseInt(searchParams.get("pageSize") || "20")
-  const where = { workflowId: params.id, agencyId: session.user.agencyId }
+  const where = { workflowId: id, agencyId: session.user.agencyId }
   const [data, total] = await Promise.all([
     prisma.workflowQueueJob.findMany({
       where,
