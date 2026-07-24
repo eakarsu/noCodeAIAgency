@@ -17,7 +17,8 @@ try {
   fail("DATABASE_URL and NEXTAUTH_URL must be valid URLs")
 }
 if (!["postgres:", "postgresql:"].includes(databaseUrl.protocol)) fail("DATABASE_URL must use PostgreSQL")
-if (applicationUrl.protocol !== "https:") fail("NEXTAUTH_URL must use HTTPS in production")
+const loopback = ["localhost", "127.0.0.1", "::1"].includes(applicationUrl.hostname)
+if (applicationUrl.protocol !== "https:" && !(applicationUrl.protocol === "http:" && loopback)) fail("NEXTAUTH_URL must use HTTPS outside loopback validation")
 if (process.env.GOVERNED_EXTERNAL_AI_ACK !== "I_ACKNOWLEDGE_APPROVED_EXTERNAL_DATA_PROCESSING") fail("approved external AI processing must be acknowledged")
 let sourceKeys
 try {

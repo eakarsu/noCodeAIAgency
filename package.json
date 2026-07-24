@@ -58,8 +58,8 @@
     "date-fns": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.555.0",
-    "next": "16.2.10",
-    "next-auth": "4.24.14",
+    "next": "16.2.11",
+    "next-auth": "4.24.15",
     "prisma": "^5.22.0",
     "react": "19.2.0",
     "react-dnd": "^16.0.1",
@@ -81,15 +81,16 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.10",
+    "eslint-config-next": "16.2.11",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.6",
     "typescript": "^5"
   },
   "overrides": {
+    "sharp": "0.35.0",
     "next": {
-      "postcss": "8.5.10"
+      "postcss": "8.5.22"
     },
     "next-auth": {
       "uuid": "11.1.1"

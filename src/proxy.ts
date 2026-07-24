@@ -5,6 +5,8 @@ const supportedProductionPaths = [
   /^\/login\/?$/,
   /^\/governed(?:\/|$)/,
   /^\/api\/auth(?:\/|$)/,
+  /^\/api\/login\/?$/,
+  /^\/api\/runtime-ai(?:\/|$)/,
   /^\/api\/governed(?:\/|$)/,
   /^\/favicon\.ico$/,
 ]
