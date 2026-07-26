@@ -33,6 +33,14 @@ if [[ -n "$frontend_port" ]]; then
 fi
 
 if [ "${NODE_ENV:-}" != "production" ]; then
+  npm run db:migrate
+  BOOTSTRAP_ACKNOWLEDGEMENT=create-initial-admin \
+    BOOTSTRAP_OWNER_EMAIL="${PROVISION_ADMIN_EMAIL:-${ADMIN_EMAIL:-}}" \
+    BOOTSTRAP_OWNER_PASSWORD="${PROVISION_ADMIN_PASSWORD:-${ADMIN_PASSWORD:-}}" \
+    BOOTSTRAP_OWNER_NAME="${PROVISION_ADMIN_NAME:-Runtime Administrator}" \
+    BOOTSTRAP_AGENCY_NAME="${BOOTSTRAP_TENANT_NAME:-Runtime Acceptance Agency}" \
+    BOOTSTRAP_AGENCY_SLUG="${BOOTSTRAP_TENANT_SLUG:-runtime-acceptance}" \
+    npm run create-admin
   echo "Starting isolated non-production validation on assigned port ${runtime_port}."
   start_command=(npm run dev -- --hostname 127.0.0.1 --port "$runtime_port")
 else

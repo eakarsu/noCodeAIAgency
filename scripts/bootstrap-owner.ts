@@ -16,8 +16,18 @@ async function main() {
   if (!email || !email.includes("@") || password.length < 16 || !name || !agencyName || !agencySlug || !/^[a-z0-9-]{3,80}$/.test(agencySlug)) {
     throw new Error("Valid owner email/name, agency name/slug, and a 16+ character password are required.")
   }
+  const existing = await prisma.user.findUnique({ where: { email }, include: { agency: true } })
+  if (existing) {
+    if (process.env.NODE_ENV === "production") throw new Error("Bootstrap refuses to modify an existing owner in production.")
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { name, password: await bcrypt.hash(password, 12), role: "AGENCY_OWNER", disabledAt: null },
+    })
+    console.log(`Reconciled initial owner ${existing.id}.`)
+    return
+  }
   const [users, agencies] = await Promise.all([prisma.user.count(), prisma.agency.count()])
-  if (users || agencies) throw new Error("Bootstrap refuses a database that already contains users or agencies.")
+  if (users || agencies) throw new Error("Bootstrap refuses a database owned by a different identity or agency.")
   const user = await prisma.user.create({
     data: {
       email,
