@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS dependencies
+FROM node:25-bookworm-slim AS dependencies
 WORKDIR /app
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates openssl \
@@ -11,7 +11,7 @@ COPY . .
 ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 RUN npx prisma generate && npm run build
 
-FROM node:24-bookworm-slim AS web
+FROM node:25-bookworm-slim AS web
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 RUN apt-get update \
