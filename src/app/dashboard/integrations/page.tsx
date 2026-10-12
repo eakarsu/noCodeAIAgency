@@ -121,9 +121,9 @@ export default function IntegrationsPage() {
 
   const fetchIntegrations = useCallback(async () => {
     try {
-      const response = await fetch("/api/integrations")
+      const response = await fetch("/api/integrations?pageSize=100")
       const data = await response.json()
-      setIntegrations(data.data || [])
+      setIntegrations(Array.isArray(data.data) ? data.data : [])
     } catch (error) {
       console.error("Error fetching integrations:", error)
     }
@@ -131,9 +131,9 @@ export default function IntegrationsPage() {
 
   const fetchWebhooks = useCallback(async () => {
     try {
-      const response = await fetch("/api/webhooks")
+      const response = await fetch("/api/webhooks?pageSize=100")
       const data = await response.json()
-      setWebhooks(data.data || [])
+      setWebhooks(Array.isArray(data.data) ? data.data : [])
     } catch (error) {
       console.error("Error fetching webhooks:", error)
     } finally {

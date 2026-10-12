@@ -75,7 +75,7 @@ export default function DashboardPage() {
           fetch("/api/integrations?pageSize=100"),
           fetch("/api/webhooks?pageSize=1"),
           fetch("/api/support-tickets?pageSize=100"),
-          fetch("/api/activity?limit=5"),
+          fetch("/api/activity?limit=20"),
         ])
 
         const [templates, workflows, clients, deployments, integrations, webhooks, tickets, activity] =
@@ -91,12 +91,12 @@ export default function DashboardPage() {
           ])
 
         // Count integrations by status
-        const activeIntegrations = integrations.data?.filter(
+        const activeIntegrations = (Array.isArray(integrations.data) ? integrations.data : []).filter(
           (i: { status: string }) => i.status === "ACTIVE"
         ).length || 0
 
         // Count tickets by status
-        const ticketData = tickets.data || []
+        const ticketData = Array.isArray(tickets.data) ? tickets.data : []
         const openTickets = ticketData.filter((t: { status: string }) => t.status === "OPEN").length
         const inProgressTickets = ticketData.filter((t: { status: string }) => t.status === "IN_PROGRESS").length
         const resolvedTickets = ticketData.filter(
@@ -118,7 +118,7 @@ export default function DashboardPage() {
             inProgress: inProgressTickets,
             resolved: resolvedTickets,
           },
-          recentActivity: activity.data || [],
+          recentActivity: Array.isArray(activity.data) ? activity.data : [],
         })
       } catch (error) {
         console.error("Error fetching stats:", error)

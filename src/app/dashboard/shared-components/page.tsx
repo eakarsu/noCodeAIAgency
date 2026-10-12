@@ -26,7 +26,7 @@ export default function SharedComponentsPage() {
   async function load() {
     const r = await fetch("/api/shared-components?pageSize=50")
     const d = await r.json()
-    setItems(d.data || [])
+    setItems(Array.isArray(d.data) ? d.data : [])
   }
   useEffect(() => { load() }, [])
 

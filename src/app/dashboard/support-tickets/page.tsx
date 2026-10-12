@@ -110,7 +110,7 @@ export default function SupportTicketsPage() {
 
       const response = await fetch(`/api/support-tickets?${params}`)
       const data = await response.json()
-      setTickets(data.data || [])
+      setTickets(Array.isArray(data.data) ? data.data : [])
     } catch (error) {
       console.error("Error fetching tickets:", error)
     } finally {
@@ -122,7 +122,7 @@ export default function SupportTicketsPage() {
     try {
       const response = await fetch("/api/clients?pageSize=100")
       const data = await response.json()
-      setClients(data.data || [])
+      setClients(Array.isArray(data.data) ? data.data : [])
     } catch (error) {
       console.error("Error fetching clients:", error)
     }

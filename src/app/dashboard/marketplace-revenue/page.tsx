@@ -31,7 +31,7 @@ export default function MarketplaceRevenuePage() {
     const s = await fetch("/api/marketplace/connect").then((r) => r.json())
     setStatus(s)
     const p = await fetch(`/api/marketplace/purchases?as=${view}`).then((r) => r.json())
-    setPurchases(p.data || [])
+    setPurchases(Array.isArray(p.data) ? p.data : [])
     setSummary(p.summary || {})
   }
   useEffect(() => {

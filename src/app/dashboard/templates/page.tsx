@@ -108,7 +108,7 @@ export default function TemplatesPage() {
 
       const response = await fetch(`/api/templates?${params}`)
       const data = await response.json()
-      setTemplates(data.data || [])
+      setTemplates(Array.isArray(data.data) ? data.data : [])
     } catch (error) {
       console.error("Error fetching templates:", error)
     } finally {

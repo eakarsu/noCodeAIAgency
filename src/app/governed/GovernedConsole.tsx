@@ -3,6 +3,13 @@
 import { useCallback, useEffect, useState } from "react"
 import { signOut } from "next-auth/react"
 import type { GovernedActor } from "@/lib/governed-ai/authz"
+import AIResponseReport from "@/components/AIResponseReport"
+
+const recommendationExamples = [
+  "For a fictional support team, recommend a reviewed intake template for requests missing order dates. Identify the source guidance needed.",
+  "Suggest an approved onboarding workflow template for a fictional small team that needs consent review and a seven-day follow-up.",
+  "Review a fictional escalation request where ownership and response deadlines are unclear. Recommend guidance supported by available tenant sources.",
+]
 
 type Source = {
   id: string
@@ -49,8 +56,8 @@ export default function GovernedConsole({ actor }: { actor: GovernedActor }) {
         json<{ documents: Source[] }>(await fetch("/api/governed/sources", { cache: "no-store" })),
         json<{ jobs: Job[] }>(await fetch("/api/governed/recommendations", { cache: "no-store" })),
       ])
-      setSources(sourceBody.documents)
-      setJobs(jobBody.jobs)
+      setSources(Array.isArray(sourceBody.documents) ? sourceBody.documents : [])
+      setJobs(Array.isArray(jobBody.jobs) ? jobBody.jobs : [])
       setError("")
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to load the governed workspace.")
@@ -122,6 +129,7 @@ export default function GovernedConsole({ actor }: { actor: GovernedActor }) {
         {canCreate && (
           <form onSubmit={queueRecommendation} className="rounded-xl border border-slate-800 bg-slate-900 p-6">
             <label htmlFor="query" className="font-semibold">Recommendation request</label>
+            <div className="mt-3 flex flex-wrap gap-2" aria-label="Recommendation examples">{recommendationExamples.map((example, index) => <button key={example} type="button" disabled={busy} onClick={() => setQuery(example)} className="rounded border border-slate-600 px-3 py-1 text-sm disabled:opacity-50">Fill example {index + 1}</button>)}</div>
             <textarea id="query" value={query} onChange={(event) => setQuery(event.target.value)} minLength={8} maxLength={1000} required className="mt-3 min-h-28 w-full rounded border border-slate-700 bg-slate-950 p-3" placeholder="Describe the approved workflow template or operating guidance you need." />
             <button disabled={busy} className="mt-3 rounded bg-cyan-400 px-4 py-2 font-semibold text-slate-950 disabled:opacity-50">Queue governed job</button>
           </form>
@@ -134,7 +142,7 @@ export default function GovernedConsole({ actor }: { actor: GovernedActor }) {
             {jobs.map((job) => (
               <article key={job.id} className="rounded-xl border border-slate-800 bg-slate-900 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3"><h3 className="font-semibold">{job.query}</h3><span className="rounded bg-slate-800 px-2 py-1 text-xs">{job.status}</span></div>
-                {job.output && <div className="mt-4 rounded bg-slate-950 p-4"><p className="font-semibold">{job.output.title}</p><p className="mt-2 text-sm text-slate-300">{job.output.rationale}</p><p className="mt-2 text-xs text-slate-400">Confidence {job.output.confidence} · {job.provider}/{job.model} · {job.latencyMs} ms · {job.costMicros} μUSD</p></div>}
+                {job.output && <div className="mt-4 rounded bg-slate-950 p-4 text-slate-900"><AIResponseReport value={job.output} title="Saved recommendation" /><p className="mt-2 text-xs text-slate-300">Provider {job.provider} · Model {job.model} · Latency {job.latencyMs} ms · Cost {job.costMicros} μUSD</p></div>}
                 {job.errorCode && <p className="mt-3 text-sm text-amber-300">Gate/worker state: {job.errorCode}</p>}
                 {canReview && job.status === "AWAITING_APPROVAL" && <div className="mt-4 flex gap-3"><button disabled={busy || note.length < 8} onClick={() => void decide(job.id, "APPROVE")} className="rounded bg-emerald-400 px-3 py-2 font-semibold text-slate-950">Approve</button><button disabled={busy || note.length < 8} onClick={() => void decide(job.id, "REJECT")} className="rounded bg-rose-400 px-3 py-2 font-semibold text-slate-950">Reject</button></div>}
               </article>

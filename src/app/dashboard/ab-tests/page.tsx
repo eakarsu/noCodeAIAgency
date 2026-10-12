@@ -33,13 +33,13 @@ export default function ABTestsPage() {
   async function load() {
     const r = await fetch("/api/ab-tests")
     const d = await r.json()
-    setTests(d.data || [])
+    setTests(Array.isArray(d.data) ? d.data : [])
   }
   useEffect(() => {
     load()
     fetch("/api/workflows?pageSize=100")
       .then((r) => r.json())
-      .then((d) => setWorkflows(d.data || []))
+      .then((d) => setWorkflows(Array.isArray(d.data) ? d.data : []))
   }, [])
 
   async function create() {

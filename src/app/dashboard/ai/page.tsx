@@ -1,5 +1,6 @@
 "use client"
 
+import AIResponseReport from "../../../components/AIResponseReport";
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -198,6 +199,18 @@ export default function AIFeaturesPage() {
     }
   }
 
+  const getAdditionalExamples = (feature: string): string[] => {
+    const examples: Record<string, string[]> = {
+      workflow: ["For a fictional clinic, route appointment requests by service and ask staff to review missing dates before confirmation.", "Draft a returns intake workflow that checks order details, asks for missing evidence, and sends a review summary to support."],
+      code: ["Write a TypeScript CSV parser with validation for required name and email fields and examples of invalid rows.", "Create a Python function that groups fictional support tickets by priority and includes tests for empty input."],
+      integration: ["Explain how to map new CRM contact fields to an email list, including consent checks and error handling.", "Outline a calendar-to-helpdesk integration that creates a review task when an appointment is cancelled."],
+      template: ["Create a fictional event registration template with confirmation, accessibility review, and cancellation steps.", "Draft a support escalation template for a small team, including triage, owner assignment, and resolution review."],
+      optimization: ["Analyze a fictional import with 100 rows, 15 duplicates, and 5 missing emails; suggest validation and batching changes.", "Review a fictional support flow with three sequential API requests and a 4-second median latency; suggest measurable improvements."],
+      debug: ["A fictional webhook returns 200 but retries create duplicate tasks. Diagnose likely idempotency gaps and verification steps.", "A fictional form submission reaches validation but never sends its notification. List likely causes and safe diagnostic checks."],
+    }
+    return examples[feature] || examples.workflow
+  }
+
   const getFeaturePromptPlaceholder = () => {
     switch (selectedFeature) {
       case "workflow":
@@ -305,7 +318,7 @@ export default function AIFeaturesPage() {
                   className="h-40"
                 />
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     onClick={() => setPrompt(getExampleForFeature(selectedFeature))}
@@ -315,6 +328,11 @@ export default function AIFeaturesPage() {
                     <FileText className="h-4 w-4 mr-2" />
                     Example
                   </Button>
+                  {getAdditionalExamples(selectedFeature).map((example, index) => (
+                    <Button key={index} type="button" variant="outline" disabled={isGenerating} onClick={() => setPrompt(example)}>
+                      Example {index + 2}
+                    </Button>
+                  ))}
                   <Button
                     onClick={handleGenerate}
                     disabled={!prompt || isGenerating}
@@ -378,9 +396,7 @@ export default function AIFeaturesPage() {
                       <Badge variant="secondary">{result.type}</Badge>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-4 overflow-auto max-h-80">
-                      <pre className="text-sm text-gray-700 whitespace-pre-wrap">
-                        {JSON.stringify(result.suggestion, null, 2)}
-                      </pre>
+                      <AIResponseReport value={result.suggestion}/>
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" className="flex-1">

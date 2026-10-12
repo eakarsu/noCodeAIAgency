@@ -85,7 +85,7 @@ export default function WhiteLabelPage() {
       const response = await fetch("/api/custom-domains")
       const data = await response.json()
       if (data.data) {
-        setDomains(data.data)
+        setDomains(Array.isArray(data.data) ? data.data : [])
       }
     } catch (error) {
       console.error("Error fetching custom domains:", error)

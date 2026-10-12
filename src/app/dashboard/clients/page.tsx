@@ -91,13 +91,13 @@ export default function ClientsPage() {
 
   const fetchClients = useCallback(async () => {
     try {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams({ pageSize: "100" })
       if (searchQuery) params.set("search", searchQuery)
       if (statusFilter) params.set("status", statusFilter)
 
       const response = await fetch(`/api/clients?${params}`)
       const data = await response.json()
-      setClients(data.data || [])
+      setClients(Array.isArray(data.data) ? data.data : [])
     } catch (error) {
       console.error("Error fetching clients:", error)
     } finally {

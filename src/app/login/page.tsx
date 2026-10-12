@@ -26,9 +26,6 @@ export default function LoginPage() {
       setEmail(credentials.email)
       setPassword(credentials.password)
 
-      const __demo = await signIn('credentials', { email: credentials.email, password: credentials.password, redirect: false });
-      if (__demo?.error) { setError('Invalid email or password'); return; }
-      window.location.assign('/');
     } catch {
       setError("Demo credentials are unavailable in this environment")
     }
@@ -99,7 +96,7 @@ export default function LoginPage() {
             />
 
             <Button type="button" variant="outline" className="w-full" onClick={fillDemoCredentials} disabled={isLoading}>
-              Auto Fill Demo Credentials
+              Fill Demo Credentials
             </Button>
 
             <Button type="submit" className="w-full" isLoading={isLoading}>

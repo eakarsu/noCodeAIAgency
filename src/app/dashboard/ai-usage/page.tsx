@@ -32,8 +32,8 @@ export default function AIUsagePage() {
     fetch(`/api/ai-usage?days=${days}&page=${page}&pageSize=50`)
       .then((r) => r.json())
       .then((d) => {
-        setData(d.data || [])
-        setByFeature(d.byFeature || [])
+        setData(Array.isArray(d.data) ? d.data : [])
+        setByFeature(Array.isArray(d.byFeature) ? d.byFeature : [])
         setTotals(d.totals || {})
         setTotalPages(d.totalPages || 1)
       })

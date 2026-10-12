@@ -51,7 +51,7 @@ export default function MarketplacePage() {
     try {
       const params = new URLSearchParams({
         page: String(page),
-        pageSize: '12',
+        pageSize: '24',
         sortBy,
       })
       if (search) params.set('search', search)
@@ -60,10 +60,10 @@ export default function MarketplacePage() {
       const res = await fetch(`/api/templates/marketplace?${params}`)
       const data: MarketplaceResponse = await res.json()
 
-      setTemplates(data.templates)
+      setTemplates(Array.isArray(data.templates) ? data.templates : [])
       setTotalPages(data.totalPages)
       if (data.filters?.categories) {
-        setCategories(data.filters.categories)
+        setCategories(Array.isArray(data.filters.categories) ? data.filters.categories : [])
       }
     } catch (error) {
       console.error('Failed to fetch templates:', error)

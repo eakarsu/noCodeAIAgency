@@ -116,7 +116,7 @@ export default function BuilderPage() {
 
       const response = await fetch(`/api/workflows?${params}`)
       const data = await response.json()
-      setWorkflows(data.data || [])
+      setWorkflows(Array.isArray(data.data) ? data.data : [])
     } catch (error) {
       console.error("Error fetching workflows:", error)
     } finally {

@@ -91,12 +91,12 @@ export default function DeploymentsPage() {
 
   const fetchDeployments = useCallback(async () => {
     try {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams({ pageSize: "100" })
       if (envFilter) params.set("environment", envFilter)
 
       const response = await fetch(`/api/deployments?${params}`)
       const data = await response.json()
-      setDeployments(data.data || [])
+      setDeployments(Array.isArray(data.data) ? data.data : [])
     } catch (error) {
       console.error("Error fetching deployments:", error)
     } finally {
@@ -108,7 +108,7 @@ export default function DeploymentsPage() {
     try {
       const response = await fetch("/api/clients?pageSize=100")
       const data = await response.json()
-      setClients(data.data || [])
+      setClients(Array.isArray(data.data) ? data.data : [])
     } catch (error) {
       console.error("Error fetching clients:", error)
     }

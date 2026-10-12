@@ -23,7 +23,7 @@ export default function ReplaysPage() {
   async function load() {
     const r = await fetch(`/api/replays?page=${page}&pageSize=20`)
     const d = await r.json()
-    setReplays(d.data || [])
+    setReplays(Array.isArray(d.data) ? d.data : [])
     setTotalPages(d.totalPages || 1)
   }
   useEffect(() => {
