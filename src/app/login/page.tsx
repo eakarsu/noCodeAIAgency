@@ -15,22 +15,6 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const fillDemoCredentials = async () => {
-    setError("")
-    try {
-      const response = await fetch("/api/auth/demo-credentials", { cache: "no-store" })
-      const credentials = await response.json()
-      if (!response.ok || !credentials.email || !credentials.password) {
-        throw new Error(credentials.error || "Demo credentials unavailable")
-      }
-      setEmail(credentials.email)
-      setPassword(credentials.password)
-
-    } catch {
-      setError("Demo credentials are unavailable in this environment")
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -95,17 +79,13 @@ export default function LoginPage() {
               required
             />
 
-            <Button type="button" variant="outline" className="w-full" onClick={fillDemoCredentials} disabled={isLoading}>
-              Fill Demo Credentials
-            </Button>
-
             <Button type="submit" className="w-full" isLoading={isLoading}>
               Sign In
             </Button>
           </form>
 
           <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            Demo autofill is available only in the local validation environment. Production accounts remain tenant-provisioned.
+            Accounts are tenant-provisioned. Contact your administrator if you need access.
           </div>
         </CardContent>
       </Card>

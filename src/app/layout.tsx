@@ -31,6 +31,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
+<script src="/feature-pack/feature-pack.js" defer />
         {children}
       </body>
     </html>
